@@ -398,14 +398,49 @@ control:
 .venv/bin/python test_proxy_commands.py
 ```
 
+## 🔑 Token Management
+
+### Automatic Token Refresh
+The system now includes **automatic token refresh**! Your Tesla tokens are checked and refreshed automatically when you run the solar charger.
+
+### Manual Token Refresh
+If you need to manually refresh tokens:
+```bash
+.venv/bin/python refresh_tokens.py
+```
+
+### When Tokens Expire
+**Tomorrow when your tokens expire, you don't need to do anything!** The system will automatically:
+1. Check token expiration when starting
+2. Refresh tokens using your refresh_token
+3. Continue normal operation
+
+### Token Expiration Schedule
+- **Access tokens**: Expire every 8 hours
+- **Refresh tokens**: Last much longer (weeks/months)
+- **Auto-refresh**: Happens 30 minutes before expiration
+
 ## 🛠️ Utility Scripts
 
-### Setup Scripts
-- **`generate_tesla_keys.py`** - Initial Tesla OAuth token generation
+### 🚀 **Daily Use Scripts**
+- **`run.py`** - Main solar charger system with auto-refresh
   ```bash
-  .venv/bin/python generate_tesla_keys.py
+  .venv/bin/python run.py
   ```
-  Run once to get your initial access/refresh tokens for Tesla Fleet API.
+  **This is all you need to run daily!** Includes automatic token refresh and smart Tesla wake-up.
+
+- **`refresh_tokens.py`** - Manual token refresh (rarely needed)
+  ```bash
+  .venv/bin/python refresh_tokens.py
+  ```
+  Only use if you want to manually refresh tokens.
+
+### 🔧 **Setup Scripts (Run Once)**
+- **`tesla_oauth_simple.py`** - Get initial Tesla OAuth tokens
+  ```bash
+  .venv/bin/python tesla_oauth_simple.py
+  ```
+  Run once during initial setup to get your access/refresh tokens.
 
 - **`tesla_register.py`** - Register your domain with Tesla Fleet API
   ```bash
@@ -413,40 +448,47 @@ control:
   ```
   Run once after hosting your public key to register with Tesla's servers.
 
-### Testing & Debug Scripts
+### 🐛 **Debug Scripts (As Needed)**
 - **`test_proxy_commands.py`** - Test Tesla commands through HTTP proxy
   ```bash
   .venv/bin/python test_proxy_commands.py
   ```
-  Verify that start/stop charging commands work through the Tesla HTTP proxy.
+  Use if Tesla commands aren't working.
 
 - **`debug_solar.py`** - Test SolarEdge API connection
   ```bash
   .venv/bin/python debug_solar.py
   ```
-  Debug SolarEdge API connectivity and data retrieval issues.
+  Use if SolarEdge data issues occur.
 
-### Maintenance Scripts
-- **`tesla_check_registration.py`** - Verify Tesla Fleet API registration status
+- **`tesla_check_registration.py`** - Verify Tesla Fleet API registration
   ```bash
   .venv/bin/python tesla_check_registration.py
   ```
-  Check if your domain is still properly registered with Tesla.
+  Use if Tesla commands suddenly stop working.
 
-### When to Use Each Script
+### 🗑️ **Scripts You Can Delete**
+These scripts were used for setup and debugging but are no longer needed:
+- `exchange_code_for_tokens.py` - Replaced by `tesla_oauth_simple.py`
+- `tesla_oauth_setup.py` - Replaced by `tesla_oauth_simple.py`
+- `refresh_tesla_token.py` - Replaced by `refresh_tokens.py`
+- `debug_tesla_oauth.py` - One-time debugging script
+- `check_tesla_app.py` - One-time debugging script
+- `wake_tesla.py` - Now integrated into `run.py`
 
-**Initial Setup (Run Once)**
-1. `generate_tesla_keys.py` - Get OAuth tokens
+### 📅 **What to Run When**
+
+**Initial Setup (Once)**
+1. `tesla_oauth_simple.py` - Get OAuth tokens
 2. `tesla_register.py` - Register domain with Tesla
 
-**Troubleshooting (As Needed)**
-- `test_proxy_commands.py` - If Tesla commands aren't working
-- `debug_solar.py` - If SolarEdge data issues occur
-- `tesla_check_registration.py` - If Tesla commands suddenly stop working
+**Daily Operation**
+- `run.py` - **This is all you need!** Handles everything automatically
 
-**Regular Operation (Daily Use)**
-- `run.py` - Main solar charger system
-- `monitor.py` - Monitor-only mode for observation
+**Troubleshooting (Rarely)**
+- `test_proxy_commands.py` - If Tesla commands fail
+- `debug_solar.py` - If SolarEdge data issues
+- `refresh_tokens.py` - If you want to manually refresh tokens
 
 ## 📁 Project Structure
 

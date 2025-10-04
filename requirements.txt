@@ -1,6 +1,8 @@
 requests
-PyYAML
-pytz
-astral
+pyyaml
 tenacity
+astral
+pymodbus
+flask
+flask-socketio
 APScheduler
