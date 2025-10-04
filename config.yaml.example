@@ -1,0 +1,48 @@
+solaredge:
+  source: "cloud" # options: "cloud" or "modbus"
+  cloud:
+    api_key: "YOUR_SOLAREDGE_API_KEY"
+    site_id: "YOUR_SITE_ID"
+  modbus:
+    host: "192.168.1.100"
+    port: 502
+    unit_id: 1
+
+tesla:
+  api:
+    type: "fleet" # options: "fleet" (official) or "owner" (unofficial)
+    client_id: "your-tesla-client-id"
+    client_secret: "your-tesla-client-secret"
+    access_token: "your-tesla-access-token"
+    refresh_token: "your-tesla-refresh-token"
+  vehicle_vin: "YOUR_TESLA_VIN"
+
+control:
+  mode: "threshold" # options: "threshold" or "dynamic_amps"
+  # Thresholds use net export if available, otherwise PV production
+  start_export_watts: 1800  # Start charging at 1.8kW surplus
+  stop_export_watts: 1500   # Stop charging at 1.5kW surplus
+  min_on_seconds: 600       # Minimum 10 minutes charging
+  min_off_seconds: 600      # Minimum 10 minutes off
+  max_soc: 80              # Stop at 80% battery
+  home_geofence:
+    latitude: 0.0
+    longitude: 0.0
+    radius_m: 200
+  daytime:
+    use_sun_times: true
+    timezone: "America/Los_Angeles"
+    sunrise_offset_min: -30   # Start 30min before sunrise
+    sunset_offset_min: 30     # End 30min after sunset
+
+polling:
+  night_sleep: true
+  test_poll: false
+  fast_seconds: 30
+  medium_seconds: 60
+  slow_seconds: 120
+
+dry_run: true  # Set to false when ready for real control
+
+logging:
+  level: INFO

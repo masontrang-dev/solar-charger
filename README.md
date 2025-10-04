@@ -1,0 +1,494 @@
+# 🌞⚡ Solar Charger - Automated Tesla Charging System
+
+A sophisticated Tesla charging automation system that intelligently controls your Tesla's charging based on real-time solar production data. Maximize your solar investment by charging your Tesla only when you have excess solar power!
+
+## ✨ Features
+
+### 🔋 **Smart Charging Control**
+- **Automatic start/stop** charging based on solar production thresholds
+- **Real-time Tesla control** via Tesla Fleet API with Vehicle Command Protocol
+- **Anti-flicker protection** with configurable minimum on/off durations
+- **SOC limits** to prevent overcharging
+- **Geofencing support** for home-only charging
+
+### 📊 **Real-Time Monitoring**
+- **Live solar production** monitoring via SolarEdge API
+- **Tesla battery level** and charging state tracking
+- **Beautiful console display** with 10-second updates
+- **Optional vehicle state** display (driving/parked when available)
+- **Export power calculation** for accurate solar surplus detection
+
+### ⚙️ **Advanced Configuration**
+- **Flexible thresholds** (start/stop watts configurable)
+- **Multiple polling rates** (fast/medium/slow based on conditions)
+- **Daytime/nighttime** scheduling with sun time calculations
+- **Dry-run mode** for testing without actual Tesla control
+- **Comprehensive logging** with configurable levels
+
+### 🔐 **Enterprise-Grade Security**
+- **Tesla Fleet API** integration with OAuth 2.0
+- **Signed vehicle commands** using Tesla Vehicle Command Protocol
+- **Virtual key pairing** for secure vehicle access
+- **Domain verification** via public key hosting
+
+## 🚀 Beginner's Setup Guide
+
+### What You'll Need
+- Tesla vehicle (2018+ recommended)
+- SolarEdge solar system with monitoring API
+- A domain/website (free Netlify account works)
+- 30-60 minutes for setup
+
+### Simple 6-Step Setup
+
+#### Step 1: Get Your API Keys 🔑
+**SolarEdge API Key:**
+1. Go to your SolarEdge monitoring portal
+2. Navigate: Admin → Site Access → API Access
+3. Click "Generate API Key" and save it
+
+**Tesla Developer Account:**
+1. Go to [developer.tesla.com](https://developer.tesla.com)
+2. Create account → Create new application
+3. **Application Settings:**
+   ```
+   Application Name: Solar Charger (or your preferred name)
+   Description: Home solar charging automation system
+   Redirect URI: https://localhost:8080/callback
+   Scopes: 
+   ✅ vehicle_device_data
+   ✅ vehicle_cmds  
+   ✅ vehicle_charging_cmds
+   ```
+4. Save your `client_id` and `client_secret`
+
+#### Step 2: Install & Configure 💻
+```bash
+# Clone and setup Python environment
+git clone <your-repo-url>
+cd solar-charger
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Edit configuration file
+cp config.yaml.example config.yaml
+nano config.yaml  # Add your API keys, Tesla VIN, SolarEdge site ID
+```
+
+#### Step 3: Generate Tesla Keys 🔐
+```bash
+# Install Go and Tesla tools
+brew install go
+git clone https://github.com/teslamotors/vehicle-command.git
+cd vehicle-command
+go build ./cmd/tesla-keygen
+go build ./cmd/tesla-http-proxy
+cd ..
+
+# Generate Tesla OAuth tokens
+.venv/bin/python generate_tesla_keys.py
+# Follow prompts to complete OAuth flow
+
+# Generate command signing keys
+cd vehicle-command
+export TESLA_KEY_NAME=solarcharger
+./tesla-keygen create > ../tesla_public_key.pem
+cd ..
+```
+
+#### Step 4: Host Your Public Key 🌐
+```bash
+# The tesla-fleet-api/ folder is already set up for you
+# Just drag and drop this folder to Netlify:
+ls tesla-fleet-api/
+# Should show: index.html, _redirects, netlify.toml, public-key.pem
+
+# After deploying to Netlify, verify your key is accessible:
+curl https://yoursite.netlify.app/.well-known/appspecific/com.tesla.3p.public-key.pem
+```
+
+#### Step 5: Register with Tesla ✅
+```bash
+# Register your domain with Tesla Fleet API
+.venv/bin/python tesla_register.py
+
+# Verify registration worked
+.venv/bin/python tesla_check_registration.py
+```
+
+#### Step 6: Approve in Tesla App 📱
+```bash
+# Generate your virtual key pairing URL
+echo "Open this link on your phone:"
+echo "https://tesla.com/_ak/yoursite.netlify.app?vin=YOUR_VIN"
+
+# Test that commands work
+.venv/bin/python test_proxy_commands.py
+```
+1. Open the generated link on your phone
+2. Approve the virtual key in your Tesla mobile app
+3. Run the test script to verify commands work
+
+### Run Your Solar Charger 🌞
+```bash
+# Terminal 1: Start Tesla proxy
+cd vehicle-command
+export TESLA_KEY_NAME=solarcharger
+./tesla-http-proxy -tls-key config/tls-key.pem -cert config/tls-cert.pem -port 8080
+
+# Terminal 2: Start solar charger
+.venv/bin/python run.py
+```
+
+**That's it!** Your Tesla will now automatically charge when you have excess solar power.
+
+---
+
+## 🚀 Detailed Setup Guide
+
+### Prerequisites
+- Tesla vehicle (2018+ recommended)
+- SolarEdge solar system with monitoring API
+- macOS or Linux system
+- Python 3.9+
+- Go 1.19+ (for Tesla HTTP proxy)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd solar-charger
+   ```
+
+2. **Set up Python environment**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Install Go and build Tesla tools**
+   ```bash
+   brew install go
+   git clone https://github.com/teslamotors/vehicle-command.git
+   cd vehicle-command
+   go build ./cmd/tesla-http-proxy
+   go build ./cmd/tesla-keygen
+   cd ..
+   ```
+   
+   **Note:** The `vehicle-command/` folder is excluded from git as it's an external dependency.
+
+## 🔧 Setup Guide
+
+### Step 1: Tesla Fleet API Setup
+
+1. **Create Tesla Developer Account**
+   - Go to [developer.tesla.com](https://developer.tesla.com)
+   - Create account and new application with these settings:
+   ```
+   Application Name: Solar Charger
+   Description: Home solar charging automation system
+   Redirect URI: https://localhost:8080/callback
+   Scopes: vehicle_device_data, vehicle_cmds, vehicle_charging_cmds
+   ```
+   - Note your `client_id` and `client_secret`
+
+2. **Generate OAuth Tokens**
+   ```bash
+   .venv/bin/python generate_tesla_keys.py
+   ```
+   Follow the prompts to complete OAuth flow.
+
+### Step 2: Tesla Vehicle Command Protocol Setup
+
+1. **Generate Command Signing Keys**
+   ```bash
+   cd vehicle-command
+   export TESLA_KEY_NAME=solarcharger
+   ./tesla-keygen create > ../tesla_public_key.pem
+   cd ..
+   ```
+
+2. **Host Public Key on Domain**
+   - Create a website (e.g., Netlify) at your domain
+   - Upload `tesla_public_key.pem` to `/.well-known/appspecific/com.tesla.3p.public-key.pem`
+   - Ensure it's accessible at: `https://yourdomain.com/.well-known/appspecific/com.tesla.3p.public-key.pem`
+
+3. **Register with Tesla Fleet API**
+   ```bash
+   .venv/bin/python tesla_register.py
+   ```
+
+4. **Pair Virtual Key with Vehicle**
+   - Open this link on your phone: `https://tesla.com/_ak/yourdomain.com?vin=YOUR_VIN`
+   - Approve the pairing request in Tesla mobile app
+
+### Step 3: SolarEdge API Setup
+
+1. **Get SolarEdge API Key**
+   - Log into SolarEdge monitoring portal
+   - Go to Admin → Site Access → API Access
+   - Generate API key and note your Site ID
+
+2. **Configure SolarEdge Settings**
+   ```yaml
+   solaredge:
+     source: "cloud"
+     cloud:
+       api_key: "YOUR_API_KEY"
+       site_id: "YOUR_SITE_ID"
+   ```
+
+### Step 4: Configuration
+
+1. **Copy and edit configuration**
+   ```bash
+   cp config.yaml.example config.yaml
+   ```
+
+2. **Update config.yaml with your settings**
+   ```yaml
+   tesla:
+     api:
+       type: "fleet"
+       client_id: "your-client-id"
+       client_secret: "your-client-secret"
+       access_token: "your-access-token"
+     vehicle_vin: "YOUR_VIN"
+
+   solaredge:
+     source: "cloud"
+     cloud:
+       api_key: "YOUR_SOLAREDGE_API_KEY"
+       site_id: "YOUR_SITE_ID"
+
+   control:
+     start_export_watts: 1800  # Start charging at 1.8kW surplus
+     stop_export_watts: 1500   # Stop charging at 1.5kW surplus
+     min_on_seconds: 600       # Minimum 10 minutes charging
+     min_off_seconds: 600      # Minimum 10 minutes off
+     max_soc: 80              # Stop at 80% battery
+
+   dry_run: false  # Set to true for testing
+   ```
+
+## 🎯 Usage
+
+### Start the System
+
+1. **Start Tesla HTTP Proxy** (in separate terminal)
+   ```bash
+   cd vehicle-command
+   export TESLA_KEY_NAME=solarcharger
+   ./tesla-http-proxy -tls-key config/tls-key.pem -cert config/tls-cert.pem -port 8080 -verbose
+   ```
+
+2. **Run Solar Charger**
+   ```bash
+   .venv/bin/python run.py
+   ```
+
+### Monitor-Only Mode
+For monitoring without control:
+```bash
+.venv/bin/python monitor.py
+```
+
+### Testing
+Test individual components:
+```bash
+# Test Tesla connection
+.venv/bin/python test_proxy_commands.py
+
+# Test SolarEdge connection
+.venv/bin/python debug_solar.py
+
+# Test complete system in dry-run mode
+# (Set dry_run: true in config.yaml first)
+.venv/bin/python run.py
+```
+
+## 📋 Display Output
+
+```
+🌞⚡ Solar Charger System - Live Control
+===============================================================================================
+Time        Solar (kW)  Tesla (%)  Vehicle     Status      Action                    Control
+-----------------------------------------------------------------------------------------------
+17:35:15      2.180kW               47%                   Plugged     Should Start              🟢 START
+17:35:25      2.180kW               47% Parked           Charging    Active                    ⚪ No Action
+17:35:35      1.450kW               47%                   Charging    Low Solar                 🔴 STOP
+```
+
+### Status Indicators
+- **🟢 START** - Charging command sent
+- **🔴 STOP** - Stop charging command sent  
+- **⚪ No Action** - No command needed
+- **⚙️ Set XA** - Amperage adjustment
+
+### Vehicle States (when available)
+- **Parked** - Vehicle in Park
+- **Driving XXmph** - Vehicle moving
+- **Drive/Reverse/Neutral** - Gear positions
+
+## ⚙️ Configuration Options
+
+### Charging Control
+```yaml
+control:
+  mode: "threshold"           # Control mode
+  start_export_watts: 1800    # Start charging threshold
+  stop_export_watts: 1500     # Stop charging threshold  
+  min_on_seconds: 600         # Minimum charging duration
+  min_off_seconds: 600        # Minimum off duration
+  max_soc: 80                # Maximum battery level
+```
+
+### Polling Rates
+```yaml
+polling:
+  test_poll: false           # Fast polling for testing
+  fast_seconds: 30           # High activity polling
+  medium_seconds: 60         # Normal polling
+  slow_seconds: 120          # Low activity polling
+  night_sleep: true          # Skip polling at night
+```
+
+### Time Windows
+```yaml
+control:
+  daytime:
+    use_sun_times: true
+    timezone: "America/Los_Angeles"
+    sunrise_offset_min: -30   # Start 30min before sunrise
+    sunset_offset_min: 30     # End 30min after sunset
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Tesla Commands Not Working**
+- Ensure Tesla HTTP proxy is running
+- Check virtual key pairing in Tesla app
+- Verify public key is accessible at your domain
+
+**SolarEdge Data Issues**
+- Verify API key and site ID
+- Check API rate limits (300 requests/day)
+- Ensure site has production data
+
+**Connection Errors**
+- Check internet connectivity
+- Verify all API credentials
+- Review logs for specific error messages
+
+### Debug Commands
+```bash
+# Check Tesla registration
+.venv/bin/python tesla_check_registration.py
+
+# Test SolarEdge API
+.venv/bin/python debug_solar.py
+
+# Verify Tesla commands
+.venv/bin/python test_proxy_commands.py
+```
+
+## 🛠️ Utility Scripts
+
+### Setup Scripts
+- **`generate_tesla_keys.py`** - Initial Tesla OAuth token generation
+  ```bash
+  .venv/bin/python generate_tesla_keys.py
+  ```
+  Run once to get your initial access/refresh tokens for Tesla Fleet API.
+
+- **`tesla_register.py`** - Register your domain with Tesla Fleet API
+  ```bash
+  .venv/bin/python tesla_register.py
+  ```
+  Run once after hosting your public key to register with Tesla's servers.
+
+### Testing & Debug Scripts
+- **`test_proxy_commands.py`** - Test Tesla commands through HTTP proxy
+  ```bash
+  .venv/bin/python test_proxy_commands.py
+  ```
+  Verify that start/stop charging commands work through the Tesla HTTP proxy.
+
+- **`debug_solar.py`** - Test SolarEdge API connection
+  ```bash
+  .venv/bin/python debug_solar.py
+  ```
+  Debug SolarEdge API connectivity and data retrieval issues.
+
+### Maintenance Scripts
+- **`tesla_check_registration.py`** - Verify Tesla Fleet API registration status
+  ```bash
+  .venv/bin/python tesla_check_registration.py
+  ```
+  Check if your domain is still properly registered with Tesla.
+
+### When to Use Each Script
+
+**Initial Setup (Run Once)**
+1. `generate_tesla_keys.py` - Get OAuth tokens
+2. `tesla_register.py` - Register domain with Tesla
+
+**Troubleshooting (As Needed)**
+- `test_proxy_commands.py` - If Tesla commands aren't working
+- `debug_solar.py` - If SolarEdge data issues occur
+- `tesla_check_registration.py` - If Tesla commands suddenly stop working
+
+**Regular Operation (Daily Use)**
+- `run.py` - Main solar charger system
+- `monitor.py` - Monitor-only mode for observation
+
+## 📁 Project Structure
+
+```
+solar-charger/
+├── clients/
+│   ├── solaredge_cloud.py    # SolarEdge API client
+│   ├── solaredge_modbus.py   # SolarEdge Modbus client  
+│   └── tesla.py              # Tesla Fleet API client
+├── utils/
+│   └── time_windows.py       # Daytime calculations
+├── vehicle-command/          # Tesla HTTP proxy tools
+├── tesla-fleet-api/          # Public key hosting (deploy to Netlify)
+├── config.yaml              # Main configuration
+├── controller.py            # Charging logic
+├── scheduler.py             # Main automation loop
+├── monitor.py              # Monitor-only mode
+├── run.py                  # Application entry point
+├── generate_tesla_keys.py   # Setup: OAuth token generation
+├── tesla_register.py        # Setup: Domain registration
+├── test_proxy_commands.py   # Debug: Test Tesla commands
+└── debug_solar.py          # Debug: Test SolarEdge API
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## ⚠️ Disclaimer
+
+This software controls your Tesla vehicle. Use at your own risk. Always monitor the system and ensure your Tesla is safely connected to a proper charging station. The authors are not responsible for any damage to your vehicle or property.
+
+## 🙏 Acknowledgments
+
+- Tesla for the Fleet API and Vehicle Command Protocol
+- SolarEdge for the monitoring API
+- The open-source community for various Python packages used

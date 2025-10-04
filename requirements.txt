@@ -1,0 +1,6 @@
+requests
+PyYAML
+pytz
+astral
+tenacity
+APScheduler

@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Configuration Files with Secrets
+config.yaml
+*.pem
+*.key
+
+# Tesla Keys and Certificates
+command-private-key.pem
+tesla_public_key.pem
+vehicle-command/config/
+*.p12
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# External Dependencies (Don't commit these)
+vehicle-command/
+tesla-fleet-api/
+
+# Example config (keep this commented out so the example is tracked)
+# config.yaml.example
