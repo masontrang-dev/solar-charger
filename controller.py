@@ -7,10 +7,25 @@ class Controller:
         self.config = config
         self.logger = logging.getLogger("controller")
         ctrl = config.get("control", {})
-        self.start_threshold_w = int(ctrl.get("start_export_watts", 3500))
-        self.stop_threshold_w = int(ctrl.get("stop_export_watts", 1500))
-        self.min_on = int(ctrl.get("min_on_seconds", 300))
-        self.min_off = int(ctrl.get("min_off_seconds", 300))
+        
+        # Check if test mode is enabled
+        test_mode = config.get("test_mode", False)
+        
+        if test_mode:
+            self.logger.info("TEST MODE ENABLED - Using test configuration values")
+            # Test mode values from config
+            test_ctrl = config.get("test_control", {})
+            self.start_threshold_w = int(test_ctrl.get("start_export_watts", 200))
+            self.stop_threshold_w = int(test_ctrl.get("stop_export_watts", 150))
+            self.min_on = int(test_ctrl.get("min_on_seconds", 30))
+            self.min_off = int(test_ctrl.get("min_off_seconds", 30))
+        else:
+            # Normal configuration values
+            self.start_threshold_w = int(ctrl.get("start_export_watts", 3500))
+            self.stop_threshold_w = int(ctrl.get("stop_export_watts", 1500))
+            self.min_on = int(ctrl.get("min_on_seconds", 300))
+            self.min_off = int(ctrl.get("min_off_seconds", 300))
+        
         self.max_soc = int(ctrl.get("max_soc", 80))
         self.mode = ctrl.get("mode", "threshold")
 

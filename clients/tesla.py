@@ -110,8 +110,74 @@ class TeslaClient:
             self.logger.info("Started charging for VIN %s", self.vin)
             return True
         except Exception as e:
-            self.logger.error("Failed to start charging: %s", e)
+            # If vehicle is asleep, try to wake it first
+            if "offline or asleep" in str(e).lower() or "unavailable" in str(e).lower():
+                self.logger.info("Vehicle asleep/unavailable, attempting wake sequence...")
+                return self._wake_and_retry_command("charge_start")
+            else:
+                self.logger.error("Failed to start charging: %s", e)
             return False
+
+    def _wake_and_retry_command(self, command: str, max_attempts: int = 3) -> bool:
+        """Wake vehicle and retry command with multiple attempts"""
+        import time
+        
+        for attempt in range(max_attempts):
+            try:
+                self.logger.info(f"Wake attempt {attempt + 1}/{max_attempts}...")
+                
+                # Try wake_up command first (Tesla HTTP proxy uses /command/ path)
+                try:
+                    self._post(f"/api/1/vehicles/{self.vin}/command/wake_up")
+                    self.logger.info("Wake command sent via proxy, waiting...")
+                except Exception as wake_e:
+                    self.logger.warning(f"Proxy wake command failed: {wake_e}")
+                    # Try alternative wake path (direct Fleet API style)
+                    try:
+                        # Use direct Fleet API call as fallback
+                        wake_url = f"{self.BASE_URL}/api/1/vehicles/{self.vin}/wake_up"
+                        response = requests.post(wake_url, headers=self._headers(), timeout=10)
+                        response.raise_for_status()
+                        self.logger.info("Direct Fleet API wake command sent, waiting...")
+                    except Exception as direct_wake_e:
+                        self.logger.warning(f"Direct wake also failed: {direct_wake_e}, trying command anyway...")
+                
+                # Wait progressively longer for each attempt
+                wait_time = 10 + (attempt * 5)  # 10s, 15s, 20s
+                self.logger.info(f"Waiting {wait_time} seconds for vehicle to wake...")
+                time.sleep(wait_time)
+                
+                # Check if vehicle is actually awake by trying to get its state
+                try:
+                    state_response = self._get(f"/api/1/vehicles/{self.vin}/vehicle_data")
+                    if state_response.get("response"):
+                        self.logger.info("Vehicle is now awake and responding")
+                    else:
+                        self.logger.warning("Vehicle wake status unclear")
+                except Exception as state_e:
+                    self.logger.warning(f"Cannot verify wake state: {state_e}")
+                
+                # Try the actual command
+                if command == "charge_start":
+                    self._post(f"/api/1/vehicles/{self.vin}/command/charge_start")
+                    self.logger.info(f"Successfully started charging after wake attempt {attempt + 1}")
+                    return True
+                elif command == "charge_stop":
+                    self._post(f"/api/1/vehicles/{self.vin}/command/charge_stop")
+                    self.logger.info(f"Successfully stopped charging after wake attempt {attempt + 1}")
+                    return True
+                    
+            except Exception as retry_e:
+                if "offline or asleep" in str(retry_e).lower() or "unavailable" in str(retry_e).lower():
+                    self.logger.warning(f"Attempt {attempt + 1} failed - vehicle still asleep: {retry_e}")
+                    if attempt < max_attempts - 1:
+                        continue
+                else:
+                    self.logger.error(f"Command failed for different reason: {retry_e}")
+                    return False
+        
+        self.logger.error(f"Failed to wake vehicle after {max_attempts} attempts")
+        return False
 
     def stop_charging(self) -> bool:
         if self.dry:
@@ -127,7 +193,12 @@ class TeslaClient:
             self.logger.info("Stopped charging for VIN %s", self.vin)
             return True
         except Exception as e:
-            self.logger.error("Failed to stop charging: %s", e)
+            # If vehicle is asleep, try to wake it first
+            if "offline or asleep" in str(e).lower() or "unavailable" in str(e).lower():
+                self.logger.info("Vehicle asleep/unavailable, attempting wake sequence...")
+                return self._wake_and_retry_command("charge_stop")
+            else:
+                self.logger.error("Failed to stop charging: %s", e)
             return False
 
     def set_charging_amps(self, amps: int) -> bool:

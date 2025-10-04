@@ -43,6 +43,17 @@ polling:
   slow_seconds: 120
 
 dry_run: true  # Set to false when ready for real control
+test_mode: false  # Enable for testing with custom test values
+
+# Test mode configuration (only used when test_mode: true)
+test_control:
+  start_export_watts: 200   # Start charging at 200W in test mode
+  stop_export_watts: 150    # Stop charging at 150W in test mode  
+  min_on_seconds: 30        # Minimum 30 seconds on in test mode
+  min_off_seconds: 30       # Minimum 30 seconds off in test mode
+
+test_polling:
+  poll_seconds: 5           # Poll every 5 seconds in test mode
 
 logging:
   level: INFO

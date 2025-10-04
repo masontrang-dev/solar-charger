@@ -22,37 +22,59 @@ class Scheduler:
             return SolarEdgeModbusClient(config)
         return SolarEdgeCloudClient(config)
 
-    def _poll_interval(self, context: dict) -> float:
+    def _poll_interval(self, context: dict) -> int:
+        # Check if test mode is enabled
+        test_mode = self.config.get("test_mode", False)
+        
+        if test_mode:
+            test_polling = self.config.get("test_polling", {})
+            return test_polling.get("poll_seconds", 5)  # Default 5-second polling in test mode
+        
+        # Normal polling logic
         polling = self.config.get("polling", {})
-        fast = float(polling.get("fast_seconds", 20))
-        med = float(polling.get("medium_seconds", 60))
-        slow = float(polling.get("slow_seconds", 300))
-
-        if not is_daytime(self.config):
-            return slow
-        if context.get("vehicle_plugged_in"):
-            if context.get("high_production"):
+        fast = polling.get("fast_seconds", 30)
+        med = polling.get("medium_seconds", 60)
+        slow = polling.get("slow_seconds", 120)
+        
+        if context.get("high_production"):
+            if self.controller._charging:
                 return fast
             return med
         return med
 
     def run(self, stop_event):
         dry_run = self.config.get("dry_run", True)
-        self.logger.info("Scheduler started (dry_run=%s)", dry_run)
+        test_mode = self.config.get("test_mode", False)
+        
+        if test_mode:
+            self.logger.info("Scheduler started (dry_run=%s, TEST_MODE=ON)", dry_run)
+        else:
+            self.logger.info("Scheduler started (dry_run=%s)", dry_run)
         
         # Print header for monitor display
-        print("\n🌞⚡ Solar Charger System - Live Control")
-        print("=" * 95)
-        print("Time        Solar (kW)  Tesla (%)  Vehicle     Status      Action                    Control")
-        print("-" * 95)
+        if test_mode:
+            print("\n🧪⚡ Solar Charger System - TEST MODE")
+            print("=" * 95)
+            print("Time        Solar (kW)  Tesla (%)  Vehicle     Status      Action                    Control")
+            print("-" * 95)
+        else:
+            print("\n🌞⚡ Solar Charger System - Live Control")
+            print("=" * 95)
+            print("Time        Solar (kW)  Tesla (%)  Vehicle     Status      Action                    Control")
+            print("-" * 95)
         
         while not stop_event.is_set():
             try:
-                daytime = is_daytime(self.config)
-                if not daytime and self.config.get("polling", {}).get("night_sleep", True):
-                    self.logger.debug("Nighttime sleep; skipping poll")
-                    time.sleep(self._poll_interval({}))
-                    continue
+                # Check daytime restrictions (skip in test mode)
+                if not test_mode:
+                    daytime = is_daytime(self.config)
+                    if not daytime and self.config.get("polling", {}).get("night_sleep", True):
+                        self.logger.info("Outside daytime window - sleeping (night_sleep=true)")
+                        time.sleep(self._poll_interval({}))
+                        continue
+                else:
+                    # Test mode - ignore daytime restrictions
+                    self.logger.debug("Test mode: ignoring daytime restrictions")
 
                 # Get current time
                 now = datetime.now().strftime("%H:%M:%S")
