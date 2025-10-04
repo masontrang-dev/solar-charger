@@ -124,6 +124,21 @@
             font-weight: normal;
         }
         
+        .loading-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #2196f3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         .btn-success { background: #4caf50; color: white; }
         .btn-danger { background: #f44336; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
@@ -280,6 +295,22 @@
                         🌅 Wake vehicle
                     </button>
                 </div>
+                
+                <!-- Amperage Controls -->
+                <div class="amperage-controls" style="margin-top: 15px;">
+                    <h4>⚡ Charging Current</h4>
+                    <div class="amperage-display" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;">
+                        <button id="decreaseAmps" class="btn btn-secondary" onclick="adjustAmps(-1)" style="padding: 8px 12px; font-size: 18px; font-weight: bold;">−</button>
+                        <div class="current-amps" style="display: flex; flex-direction: column; align-items: center; min-width: 80px;">
+                            <span id="currentAmps" style="font-size: 24px; font-weight: bold; color: #2196f3;">12A</span>
+                            <span id="maxAmpsLabel" style="font-size: 12px; color: #666;">Max: 48A</span>
+                        </div>
+                        <button id="increaseAmps" class="btn btn-secondary" onclick="adjustAmps(1)" style="padding: 8px 12px; font-size: 18px; font-weight: bold;">+</button>
+                    </div>
+                    <div style="text-align: center; font-size: 12px; color: #666;">
+                        <span>Range: 5A - <span id="maxAmpsRange">48</span>A</span>
+                    </div>
+                </div>
             
             <!-- System Panel -->
             <div class="card">
@@ -380,6 +411,16 @@
             
             // Handle sleeping state for buttons
             updateSleepingState(isSleeping);
+            
+            // Update amperage display from Tesla data
+            if (!isSleeping && data.tesla.charge_current_request) {
+                currentAmps = data.tesla.charge_current_request;
+                // Update max amps from Tesla data if available
+                if (data.tesla.charge_current_request_max) {
+                    maxAmps = data.tesla.charge_current_request_max;
+                }
+                updateAmperageDisplay();
+            }
             
             // Charging indicator
             const indicator = document.getElementById('chargingIndicator');
@@ -514,30 +555,22 @@
         function wakeVehicle() {
             const wakeBtn = document.getElementById('wakeBtn');
             wakeBtn.disabled = true;
-            wakeBtn.textContent = '🌅 Waking...';
+            wakeBtn.textContent = 'Waking...';
             
             fetch('/api/wake_vehicle', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                method: 'POST'
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    showMessage('Vehicle wake command sent successfully', 'success');
-                    // Re-enable button after a delay
-                    setTimeout(() => {
-                        wakeBtn.disabled = false;
-                        wakeBtn.textContent = '🌅 Wake Vehicle';
-                    }, 3000);
-                } else {
-                    showMessage('Failed to wake vehicle: ' + data.message, 'error');
+                showMessage(data.message, data.success ? 'success' : 'error');
+                if (!data.success) {
                     wakeBtn.disabled = false;
-                    wakeBtn.textContent = '🌅 Wake Vehicle';
+                    wakeBtn.textContent = 'Wake Vehicle';
                 }
             })
             .catch(error => {
+                console.error('Error:', error);
+                showMessage('Failed to wake vehicle', 'error');
                 showMessage('Error waking vehicle: ' + error, 'error');
                 wakeBtn.disabled = false;
                 wakeBtn.textContent = '🌅 Wake Vehicle';
@@ -653,6 +686,87 @@
                     console.error('Failed to load config:', error);
                 });
         }
+        
+        // Global variables for amperage control
+        let currentAmps = 12;
+        let minAmps = 5;
+        let maxAmps = 48;
+        
+        function updateAmperageDisplay() {
+            document.getElementById('currentAmps').textContent = `${currentAmps}A`;
+            document.getElementById('maxAmpsLabel').textContent = `Max: ${maxAmps}A`;
+            document.getElementById('maxAmpsRange').textContent = maxAmps;
+            
+            // Update button states
+            const decreaseBtn = document.getElementById('decreaseAmps');
+            const increaseBtn = document.getElementById('increaseAmps');
+            
+            decreaseBtn.disabled = currentAmps <= minAmps;
+            increaseBtn.disabled = currentAmps >= maxAmps;
+            
+            // Visual feedback for disabled buttons
+            decreaseBtn.style.opacity = decreaseBtn.disabled ? '0.5' : '1';
+            increaseBtn.style.opacity = increaseBtn.disabled ? '0.5' : '1';
+        }
+        
+        function adjustAmps(delta) {
+            const newAmps = currentAmps + delta;
+            
+            // Check bounds
+            if (newAmps < minAmps || newAmps > maxAmps) {
+                return;
+            }
+            
+            setAmps(newAmps);
+        }
+        
+        function setAmps(amps) {
+            // Validate range
+            if (amps < minAmps || amps > maxAmps) {
+                showMessage(`Amperage must be between ${minAmps}A and ${maxAmps}A`, 'error');
+                return;
+            }
+            
+            // Disable buttons temporarily
+            const decreaseBtn = document.getElementById('decreaseAmps');
+            const increaseBtn = document.getElementById('increaseAmps');
+            const originalDecrease = decreaseBtn.innerHTML;
+            const originalIncrease = increaseBtn.innerHTML;
+            
+            decreaseBtn.disabled = true;
+            increaseBtn.disabled = true;
+            decreaseBtn.innerHTML = '<div class="loading-spinner"></div>';
+            increaseBtn.innerHTML = '<div class="loading-spinner"></div>';
+            
+            fetch(`/api/control/set_amps?amps=${amps}`, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentAmps = amps;
+                    updateAmperageDisplay();
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage(`Failed to set ${amps}A`, 'error');
+            })
+            .finally(() => {
+                // Re-enable buttons and restore text
+                setTimeout(() => {
+                    decreaseBtn.innerHTML = originalDecrease;
+                    increaseBtn.innerHTML = originalIncrease;
+                    updateAmperageDisplay(); // This will set proper disabled states
+                }, 1000);
+            });
+        }
+        
+        // Initialize amperage display
+        updateAmperageDisplay();
         
         // Initial data load
         fetch('/api/data')

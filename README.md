@@ -5,11 +5,14 @@ A sophisticated Tesla charging automation system that intelligently controls you
 ## ✨ Features
 
 ### 🔋 **Smart Charging Control**
-- **Automatic start/stop** charging based on solar production thresholds
+- **Dynamic amperage control** - Automatically adjusts charging current based on available solar
+- **Stepped amperage levels** - Uses 8A, 10A, 12A steps to reduce API calls
+- **Threshold-based control** - Traditional start/stop charging at configurable thresholds
 - **Real-time Tesla control** via Tesla Fleet API with Vehicle Command Protocol
+- **Tesla-style amperage interface** - Manual +/- amperage controls with proper charger limits
 - **Anti-flicker protection** with configurable minimum on/off durations
 - **SOC limits** to prevent overcharging
-- **Geofencing support** for home-only charging
+- **Ultra-low API usage** - Optimized for 5000 calls/month budget
 
 ### 📊 **Real-Time Monitoring**
 - **Live solar production** monitoring via SolarEdge API
@@ -30,8 +33,10 @@ A sophisticated Tesla charging automation system that intelligently controls you
 ### 🌐 **Web Dashboard**
 - **Real-time monitoring** with live updates via WebSocket
 - **Manual charging control** (start/stop charging buttons)
+- **Tesla-style amperage control** with +/- buttons and charger limit detection
 - **Tesla wake management** with smart sleep detection
 - **Solar energy logging** with detailed session tracking
+- **Ultra-efficient API usage** - Same smart polling as backend system
 - **Responsive design** works on desktop and mobile
 
 ### 🔐 **Enterprise-Grade Security**
@@ -39,6 +44,15 @@ A sophisticated Tesla charging automation system that intelligently controls you
 - **Signed vehicle commands** using Tesla Vehicle Command Protocol
 - **Virtual key pairing** for secure vehicle access
 - **Domain verification** via public key hosting
+
+### 💰 **Ultra-Efficient API Usage**
+- **Smart polling algorithms** - Only calls Tesla API when necessary
+- **Stepped amperage control** - Reduces command API calls by 75%
+- **Intelligent caching** - Reuses data when appropriate
+- **Daily call limits** - Built-in protection against overuse
+- **Startup optimization** - Single initialization call per app
+- **~1,200 calls/month** - 76% under Tesla's 5000/month limit
+- **Cost-effective operation** - Minimal Tesla API charges
 
 ## 🚀 Beginner's Setup Guide
 
@@ -279,14 +293,25 @@ export TESLA_KEY_NAME=solarcharger
        site_id: "YOUR_SITE_ID"
 
    control:
+    mode: "threshold"         # "threshold" or "dynamic"
     start_export_watts: 1800  # Start charging at 1.8kW surplus
     stop_export_watts: 1500   # Stop charging at 1.5kW surplus
     min_on_seconds: 600       # Minimum 10 minutes charging
     min_off_seconds: 600      # Minimum 10 minutes off
     max_soc: 80              # Stop at 80% battery
+    
+    # Dynamic charging configuration
+    dynamic_charging:
+      enabled: true           # Enable dynamic amperage control
+      min_watts: 600          # Minimum Tesla power (5A × 120V)
+      min_amps: 5             # Tesla minimum amperage
+      max_amps: 12            # Your charger maximum (12A for 120V mobile connector)
+      min_start_amps: 8       # Don't start charging below 8A (reduces API calls)
+      amp_steps: [8, 10, 12]  # Only use these amperage levels (reduces API calls)
 
   tesla:
     wake_threshold_percent: 0.95  # Wake Tesla at 95% of charging threshold
+    charging_voltage: 120     # Your charging voltage (120V or 240V)
 
   dry_run: false  # Set to true for testing
    ```
@@ -357,18 +382,51 @@ Time        Solar (kW)  Tesla (%)  Vehicle     Status      Action               
 
 ## ⚙️ Configuration Options
 
+### Charging Modes
+
+The system supports two charging modes:
+
+#### **Threshold Mode** (Traditional)
+- **Start/stop charging** based on fixed solar production thresholds
+- **Simple operation** - charges at full power when solar > threshold
+- **Good for**: Stable solar conditions, simple setup
+
+#### **Dynamic Mode** (Advanced)
+- **Automatically adjusts amperage** based on available solar power
+- **Maximizes solar utilization** - starts charging at lower solar levels
+- **Smooth operation** - gradually reduces power as sun sets instead of abrupt stops
+- **Good for**: Variable solar conditions, maximum efficiency
+
+**Example: Dynamic vs Threshold**
+```
+Solar Production: 1600W (below 1800W threshold)
+
+Threshold Mode: No charging (waiting for 1800W)
+Dynamic Mode: 10A charging (1600W - 360W house = 1240W ÷ 120V = 10A step)
+
+Stepped Amperage Levels: 8A → 10A → 12A (reduces API calls)
+```
+
 ### Charging Control
 ```yaml
 control:
-  mode: "threshold"           # Control mode
+  mode: "threshold"           # "threshold" or "dynamic"
   start_export_watts: 1800    # Start charging threshold
   stop_export_watts: 1500     # Stop charging threshold  
   min_on_seconds: 600         # Minimum charging duration
   min_off_seconds: 600        # Minimum off duration
   max_soc: 80                # Maximum battery level
+  
+  # Dynamic charging (when mode: "dynamic")
+  dynamic_charging:
+    enabled: true             # Enable dynamic amperage control
+    min_watts: 600            # Minimum Tesla power for charging
+    min_amps: 5               # Tesla minimum amperage
+    max_amps: 12              # Charger maximum amperage
 
 tesla:
   wake_threshold_percent: 0.95  # Wake Tesla at 95% of charging threshold
+  charging_voltage: 120       # Your charging voltage (120V or 240V)
 ```
 
 ### Polling Rates

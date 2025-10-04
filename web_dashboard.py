@@ -13,18 +13,28 @@ from datetime import datetime
 from clients.tesla import TeslaClient
 from clients.solaredge_cloud import SolarEdgeCloudClient
 from utils.solar_logger import SolarChargingLogger
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'solar-charger-secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Global state
+# Global system data
 system_data = {
     'solar': {'pv_production_w': 0},
-    'tesla': {'soc': 0, 'charging_state': 'Unknown', 'plugged_in': False},
+    'tesla': {'soc': 0, 'charge_state': 'Unknown', 'plugged_in': False},
     'system': {'status': 'Starting', 'last_action': 'None', 'dry_run': True, 'start_threshold_w': 1800, 'stop_threshold_w': 1500},
     'logs': []
 }
+
+# Track startup state and API usage
+startup_poll_done = False
+last_tesla_poll = 0
+last_tesla_data = {}
+min_tesla_poll_interval = 300  # 5 minutes minimum between polls
+last_charging_power = 0
+battery_capacity_kwh = 75
+max_daily_calls = 50  # Same conservative limit as backend
+daily_call_count = 0
+last_call_reset = time.time()
 
 config = {}
 clients = {}
@@ -49,6 +59,52 @@ def load_config():
         add_log(f"Error loading config: {e}", "error")
         return False
 
+def can_poll_tesla(force_poll=False) -> bool:
+    """Smart Tesla polling to reduce API costs (same logic as backend)"""
+    global startup_poll_done, last_tesla_poll, daily_call_count, last_call_reset
+    
+    now = time.time()
+    time_since_last_poll = now - last_tesla_poll
+    
+    # Always poll on startup to initialize system
+    if not startup_poll_done:
+        add_log("Web dashboard startup Tesla poll - initializing system data", "info")
+        return True
+    
+    # Reset daily call counter at midnight
+    if now - last_call_reset > 86400:  # 24 hours
+        daily_call_count = 0
+        last_call_reset = now
+        add_log("Daily Tesla API call counter reset", "info")
+    
+    # Check daily call limit
+    if daily_call_count >= max_daily_calls:
+        add_log(f"Daily Tesla API limit reached ({daily_call_count}/{max_daily_calls})", "warning")
+        return False
+    
+    # Don't poll too frequently (minimum 5 minutes)
+    if time_since_last_poll < min_tesla_poll_interval:
+        add_log(f"Tesla poll skipped - too soon ({time_since_last_poll:.0f}s < {min_tesla_poll_interval}s)", "debug")
+        return False
+        
+    # If not charging, poll very rarely (every 3 hours)
+    if last_charging_power == 0:
+        should_poll = time_since_last_poll > 10800  # 3 hours when not charging
+        if not should_poll:
+            add_log(f"Tesla poll skipped - not charging ({time_since_last_poll:.0f}s < 10800s)", "debug")
+        return should_poll
+        
+    # If charging, calculate expected SOC change
+    power_kw = last_charging_power / 1000.0
+    time_hours = time_since_last_poll / 3600.0
+    expected_soc_change = (power_kw * time_hours) / battery_capacity_kwh * 100
+    
+    # Poll if we expect SOC to have changed by 2% or more
+    should_poll = expected_soc_change >= 2.0
+    if not should_poll:
+        add_log(f"Tesla poll skipped - SOC change too small ({expected_soc_change:.2f}% < 2%)", "debug")
+    return should_poll
+
 def add_log(message, level="info"):
     """Add log entry"""
     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -63,6 +119,7 @@ def add_log(message, level="info"):
 
 def update_system_data():
     """Update system data from clients"""
+    global startup_poll_done, last_tesla_poll, last_tesla_data, last_charging_power, daily_call_count
     try:
         # Update system status and thresholds FIRST (use test mode values if enabled)
         system_data['system']['status'] = 'Running'
@@ -100,18 +157,47 @@ def update_system_data():
                 last_charging_state = system_data['tesla'].get('charging_state', 'Unknown')
                 might_be_charging = last_charging_state in ['Charging', 'Starting']
                 
-                should_poll_tesla = (
+                # Check if we should poll based on solar conditions
+                should_poll_tesla_solar = (
                     solar_kw >= wake_threshold_kw or  # Solar is high enough
                     might_be_charging  # Or Tesla might be charging
                 )
                 
+                # Apply smart polling logic to reduce API costs
+                should_poll_tesla = (should_poll_tesla_solar and can_poll_tesla()) or not startup_poll_done
+                
                 if should_poll_tesla:
-                    # Poll Tesla (solar sufficient or might be charging)
-                    reason = "might be charging" if might_be_charging else "solar sufficient"
-                    add_log(f"Polling Tesla ({reason}): solar={solar_kw:.2f}kW, threshold={wake_threshold_kw:.2f}kW", "debug")
-                    tesla_data = clients['tesla'].get_state(wake_if_needed=True)
-                    system_data['tesla'] = tesla_data
-                    add_log(f"Tesla data: SOC {tesla_data.get('soc', 0)}%, State: {tesla_data.get('charging_state', 'Unknown')}", "info")
+                    # Poll Tesla (solar sufficient or might be charging or startup)
+                    if not startup_poll_done:
+                        reason = "startup initialization"
+                    elif might_be_charging:
+                        reason = "might be charging"
+                    else:
+                        reason = "solar sufficient"
+                    
+                    add_log(f"Polling Tesla ({reason}) - Call #{daily_call_count + 1}/{max_daily_calls}", "debug")
+                    
+                    try:
+                        tesla_data = clients['tesla'].get_state(wake_if_needed=True)
+                        system_data['tesla'] = tesla_data
+                        add_log(f"Tesla data: SOC {tesla_data.get('soc', 0)}%, State: {tesla_data.get('charging_state', 'Unknown')}", "info")
+                        
+                        # Update cache and call counter
+                        last_tesla_poll = time.time()
+                        last_tesla_data = tesla_data
+                        last_charging_power = tesla_data.get('charger_power', 0) * 1000  # Convert kW to W
+                        daily_call_count += 1
+                        startup_poll_done = True  # Mark startup poll as complete
+                        
+                    except Exception as e:
+                        add_log(f"Tesla polling failed: {e}", "error")
+                        # Keep default Tesla data on failure
+                        startup_poll_done = True  # Still mark as done to avoid infinite retries
+                        
+                elif should_poll_tesla_solar and last_tesla_data:
+                    # Use cached data to avoid API call
+                    add_log("Using cached Tesla data to reduce API costs", "debug")
+                    system_data['tesla'] = last_tesla_data
                 else:
                     # Solar too low and not charging - don't poll Tesla at all (let it sleep)
                     add_log(f"Solar too low ({solar_kw:.2f}kW < {wake_threshold_kw:.2f}kW) and not charging - not polling Tesla", "info")
@@ -227,6 +313,37 @@ def control_action(action):
                     except Exception as e:
                         add_log(f"Failed to refresh Tesla data: {e}", "error")
             
+        elif action == 'set_amps':
+            amps = request.args.get('amps', type=int)
+            if not amps or amps < 5 or amps > 48:
+                message = "Invalid amperage (must be 5-48A)"
+                level = "error"
+                success = False
+            else:
+                # Check if amperage is already at target to avoid unnecessary calls
+                current_amps = system_data['tesla'].get('charge_current_request', 0)
+                if current_amps == amps:
+                    message = f"Already charging at {amps}A"
+                    level = "info"
+                    success = True
+                    add_log(f"Skipped amperage change - already at {amps}A", "debug")
+                else:
+                    success = clients['tesla'].set_charging_amps(amps)
+                    message = f"Set charging to {amps}A" if success else f"Failed to set charging to {amps}A"
+                    level = "success" if success else "error"
+                
+                # Immediately refresh Tesla data after command
+                if success:
+                    try:
+                        add_log(f"Refreshing Tesla data after setting {amps}A...", "debug")
+                        tesla_data = clients['tesla'].get_state(wake_if_needed=True)
+                        system_data['tesla'] = tesla_data
+                        add_log(f"Updated Tesla charging current: {tesla_data.get('charge_current_request', 0)}A", "info")
+                        # Push updated data to all connected clients immediately
+                        socketio.emit('data_update', system_data)
+                    except Exception as e:
+                        add_log(f"Failed to refresh Tesla data: {e}", "error")
+        
         elif action == 'refresh_data':
             update_system_data()
             message = "Data refreshed"

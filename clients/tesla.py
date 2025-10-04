@@ -2,30 +2,83 @@ import logging
 import requests
 import yaml
 import urllib3
+import time
 
 # Disable SSL warnings for Tesla HTTP proxy self-signed certificate
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-
 class TeslaClient:
     BASE_URL = "https://fleet-api.prd.na.vn.cloud.tesla.com"
     PROXY_URL = "https://localhost:8080"  # Tesla HTTP proxy
     
     def __init__(self, config: dict):
-        self.logger = logging.getLogger("tesla")
         self.config = config
-        self.dry = bool(config.get("dry_run", True))
-        self.vin = config.get("tesla", {}).get("vehicle_vin")
+        self.logger = logging.getLogger("tesla")
         
-        tesla_config = config.get("tesla", {}).get("api", {})
-        self.access_token = tesla_config.get("access_token")
+        tesla_config = config.get("tesla", {})
+        api_config = tesla_config.get("api", {})
+        
+        self.vin = tesla_config.get("vehicle_vin")
+        if not self.vin:
+            raise ValueError("Tesla VIN not configured")
+        
+        self.dry = config.get("dry_run", False)
+        
+        # API configuration
+        self.api_type = api_config.get("type", "fleet")
+        if self.api_type == "fleet":
+            self.BASE_URL = "https://fleet-api.prd.na.vn.cloud.tesla.com"
+        else:
+            self.BASE_URL = "https://owner-api.teslamotors.com"
+        
+        # Authentication
+        self.access_token = api_config.get("access_token")
+        self.refresh_token = api_config.get("refresh_token")
+        self.client_id = api_config.get("client_id")
+        self.client_secret = api_config.get("client_secret")
         
         if not self.access_token:
-            self.logger.warning("No Tesla access token configured")
+            raise ValueError("Tesla access token not configured")
+        
+        # Smart caching to reduce API calls
+        self._last_data = {}
+        self._last_poll_time = 0
+        self._min_poll_interval = 30  # Minimum 30 seconds between polls
+        self._last_soc = 0
+        self._last_charging_power = 0
+        self._charging_voltage = tesla_config.get("charging_voltage", 120)
+        self._battery_capacity_kwh = 75  # Approximate Tesla battery capacity
+    
+    def _should_poll_tesla(self, force_poll=False) -> bool:
+        """Determine if we should poll Tesla based on time and expected SOC changes"""
+        now = time.time()
+        time_since_last_poll = now - self._last_poll_time
+        
+        # Always poll if forced or if it's been too long
+        if force_poll or time_since_last_poll > 300:  # 5 minutes max
+            return True
+            
+        # Don't poll too frequently
+        if time_since_last_poll < self._min_poll_interval:
+            return False
+            
+        # If not charging, poll less frequently
+        if self._last_charging_power == 0:
+            return time_since_last_poll > 120  # 2 minutes when not charging
+            
+        # If charging, calculate expected SOC change
+        # SOC change = (power_kw * time_hours) / battery_capacity_kwh * 100
+        power_kw = self._last_charging_power / 1000.0
+        time_hours = time_since_last_poll / 3600.0
+        expected_soc_change = (power_kw * time_hours) / self._battery_capacity_kwh * 100
+        
+        # Poll if we expect SOC to have changed by 1% or more
+        return expected_soc_change >= 1.0
     
     def _headers(self):
+        """Get HTTP headers for Tesla API requests"""
         return {
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json"
@@ -34,6 +87,10 @@ class TeslaClient:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
     def _get(self, path: str):
         url = f"{self.BASE_URL}{path}"
+        if path in self._last_data and time.time() - self._last_poll_time < self._min_poll_interval:
+            self.logger.debug(f"Returning cached data for {path}")
+            return self._last_data[path]
+        
         response = requests.get(url, headers=self._headers(), timeout=10)
         response.raise_for_status()
         return response.json()
@@ -68,7 +125,9 @@ class TeslaClient:
         
         try:
             # First check vehicle status without waking
+            self.logger.debug("Getting vehicle list from Tesla API...")
             vehicles_data = self._get("/api/1/vehicles")
+            self.logger.debug(f"Vehicles API response keys: {list(vehicles_data.keys()) if vehicles_data else 'None'}")
             vehicles = vehicles_data.get("response", [])
             
             vehicle_info = None
