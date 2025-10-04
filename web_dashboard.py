@@ -243,6 +243,44 @@ def get_data():
     """API endpoint for current data"""
     return jsonify(system_data)
 
+@app.route('/api/tesla/refresh', methods=['POST'])
+def refresh_tesla_data():
+    """Force a refresh of Tesla data"""
+    try:
+        global last_tesla_poll, daily_call_count
+        
+        # Check if we can make an API call
+        if daily_call_count >= max_daily_calls:
+            add_log("Cannot refresh Tesla data: Daily API call limit reached", "warning")
+            return jsonify({
+                'success': False,
+                'message': 'Daily API call limit reached'
+            })
+            
+        # Force a Tesla data refresh
+        add_log("Manually refreshing Tesla data...", "info")
+        tesla_data = clients['tesla'].get_state(wake_if_needed=True)
+        system_data['tesla'] = tesla_data
+        last_tesla_poll = time.time()
+        daily_call_count += 1
+        
+        # Update all connected clients
+        socketio.emit('data_update', system_data)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tesla data refreshed successfully',
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+    except Exception as e:
+        error_msg = f"Error refreshing Tesla data: {str(e)}"
+        add_log(error_msg, "error")
+        return jsonify({
+            'success': False,
+            'message': error_msg
+        }), 500
+
 @app.route('/api/control/<action>')
 def control_action(action):
     """Manual control actions"""

@@ -5,11 +5,12 @@ A sophisticated Tesla charging automation system that intelligently controls you
 ### ✨ Features
 
 ### 🔄 **API Efficiency & Reliability**
-- **Intelligent rate limiting** - Prevents hitting SolarEdge API rate limits
-- **Smart response caching** - Reduces API calls with configurable TTL
-- **Exponential backoff** - Automatically handles rate limit responses
-- **Request throttling** - Ensures minimum time between API calls
-- **Robust error handling** - Graceful degradation during API issues
+- **SolarEdge API Rate Limiting** - Enforces 300 requests/day limit with 2-minute minimum intervals
+- **Smart response caching** - 2-minute TTL by default to reduce API calls
+- **Exponential backoff** - Automatically handles rate limit responses with configurable retries
+- **Request throttling** - Enforces 2-minute minimum between SolarEdge API calls
+- **Circuit breaker** - Prevents cascading failures during API issues
+- **Jitter** - Adds randomness to prevent thundering herd problem
 
 ### 🔋 **Smart Charging Control**
 - **Dynamic amperage control** - Automatically adjusts charging current based on available solar
@@ -32,6 +33,8 @@ A sophisticated Tesla charging automation system that intelligently controls you
 ### ⚙️ **Advanced Configuration**
 - **Flexible thresholds** (start/stop watts configurable)
 - **Configurable wake threshold** (control when Tesla wakes from sleep)
+- **SolarEdge API rate limiting** - Configurable minimum request interval (default: 120s)
+- **Cache TTL** - Adjustable cache duration for SolarEdge API responses
 - **Multiple polling rates** (fast/medium/slow based on conditions)
 - **Daytime/nighttime** scheduling with sun time calculations
 - **Dry-run mode** for testing without actual Tesla control
