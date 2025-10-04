@@ -33,20 +33,20 @@ def should_wake_tesla(config: dict, logger: logging.Logger, force_wake: bool = F
         from clients.solaredge_cloud import SolarEdgeCloudClient
         
         solar_client = SolarEdgeCloudClient(config)
-        solar_data = solar_client.get_production()
+        solar_data = solar_client.get_power()
         
         current_production_w = solar_data.get('pv_production_w', 0)
         current_production_kw = current_production_w / 1000
         
         # Get charging thresholds from config
-        start_threshold_kw = config.get('charging', {}).get('start_threshold_kw', 1.8)
+        start_threshold_kw = config.get('control', {}).get('start_export_watts', 1800) / 1000
         
         logger.info(f"Current solar production: {current_production_kw:.2f}kW")
         logger.info(f"Start charging threshold: {start_threshold_kw}kW")
         
         # Only wake if we have enough solar to potentially start charging
         # Add a small buffer (0.1kW) to account for fluctuations
-        wake_threshold = start_threshold_kw - 0.1
+        wake_threshold = start_threshold_kw - 0.05
         
         if current_production_kw >= wake_threshold:
             logger.info(f"☀️ Solar production ({current_production_kw:.2f}kW) is near charging threshold - will wake Tesla")

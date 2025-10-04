@@ -58,7 +58,7 @@ class TeslaClient:
         response.raise_for_status()
         return response.json()
 
-    def get_state(self) -> dict:
+    def get_state(self, wake_if_needed: bool = True) -> dict:
         if not self.access_token or not self.vin:
             self.logger.debug("No Tesla access token or VIN; returning placeholder data")
             return {
@@ -67,6 +67,43 @@ class TeslaClient:
             }
         
         try:
+            # First check vehicle status without waking
+            vehicles_data = self._get("/api/1/vehicles")
+            vehicles = vehicles_data.get("response", [])
+            
+            vehicle_info = None
+            for v in vehicles:
+                if v.get("vin") == self.vin:
+                    vehicle_info = v
+                    break
+            
+            if not vehicle_info:
+                raise Exception(f"Vehicle with VIN {self.vin} not found")
+            
+            vehicle_state = vehicle_info.get("state", "unknown")
+            self.logger.debug(f"Vehicle state: {vehicle_state}")
+            
+            # If vehicle is asleep/offline and we don't want to wake it
+            if vehicle_state in ["asleep", "offline"] and not wake_if_needed:
+                self.logger.debug(f"Vehicle is {vehicle_state}, not waking")
+                return {
+                    "vehicle_state": vehicle_state,
+                    "plugged_in": False,  # Unknown, assume not plugged
+                    "soc": 0,
+                    "charging_state": "Sleeping",
+                }
+            
+            # If vehicle is asleep/offline but we need to wake it
+            if vehicle_state in ["asleep", "offline"] and wake_if_needed:
+                self.logger.info(f"Vehicle is {vehicle_state}, attempting to wake...")
+                if not self.wake_vehicle():
+                    return {
+                        "vehicle_state": vehicle_state,
+                        "plugged_in": False,
+                        "soc": 0,
+                        "charging_state": "Sleeping",
+                    }
+            
             # Get vehicle data from Tesla Fleet API
             data = self._get(f"/api/1/vehicles/{self.vin}/vehicle_data")
             vehicle_data = data.get("response", {})
@@ -76,11 +113,29 @@ class TeslaClient:
             drive_state = vehicle_data.get("drive_state", {})
             
             return {
-                "plugged_in": charge_state.get("charging_state") in ["Charging", "Stopped", "Complete"],
-                "soc": charge_state.get("battery_level"),
-                "charging_state": charge_state.get("charging_state"),
-                "charge_limit_soc": charge_state.get("charge_limit_soc"),
-                "charge_current_request": charge_state.get("charge_current_request"),
+                "plugged_in": charge_state.get("charging_state") != "Disconnected",
+                "soc": charge_state.get("battery_level", 0),
+                "charging_state": charge_state.get("charging_state", "Unknown"),
+                
+                # Detailed charging information
+                "charge_current_request": charge_state.get("charge_current_request", 0),  # Requested amps
+                "charge_current_request_max": charge_state.get("charge_current_request_max", 0),  # Max available amps
+                "charger_actual_current": charge_state.get("charger_actual_current", 0),  # Actual charging amps
+                "charger_voltage": charge_state.get("charger_voltage", 0),  # Charging voltage
+                
+                # Calculate actual charging power from voltage and current (charger_power field seems to be a status, not actual power)
+                "charger_power": (charge_state.get("charger_actual_current", 0) * charge_state.get("charger_voltage", 0) / 1000.0),  # Calculate kW from V*A
+                "charger_power_raw": charge_state.get("charger_power", 0),  # Keep original field for reference
+                
+                "charge_rate": charge_state.get("charge_rate", 0),  # Miles per hour charging rate
+                
+                # Additional useful info
+                "time_to_full_charge": charge_state.get("time_to_full_charge", 0),  # Hours to full
+                "charge_limit_soc": charge_state.get("charge_limit_soc", 80),  # Charge limit %
+                "charge_port_door_open": charge_state.get("charge_port_door_open", False),
+                "charge_port_latch": charge_state.get("charge_port_latch", "Unknown"),
+                
+                # Vehicle info
                 "vehicle_state": vehicle_state.get("car_version"),
                 "shift_state": drive_state.get("shift_state"),  # Park, Drive, Reverse, Neutral
                 "speed": drive_state.get("speed"),
@@ -90,12 +145,30 @@ class TeslaClient:
                 }
             }
         except Exception as e:
-            self.logger.warning("Failed to get Tesla vehicle state: %s", e)
-            return {
-                "plugged_in": True,  # fallback assumption
-                "soc": 60,
-            }
-
+            self.logger.error(f"Failed to get Tesla vehicle state: {e}")
+            return {"plugged_in": False, "soc": 0, "charge_state": "Error", "vehicle_state": "error"}
+    
+    def wake_vehicle(self) -> bool:
+        """Wake up the vehicle"""
+        if not self.access_token or not self.vin:
+            self.logger.error("No Tesla access token or VIN for wake command")
+            return False
+        
+        try:
+            self.logger.info("Sending wake command to vehicle...")
+            data = self._post(f"/api/1/vehicles/{self.vin}/wake_up")
+            
+            if data.get("response", {}).get("state") == "online":
+                self.logger.info("Vehicle woke up successfully")
+                return True
+            else:
+                self.logger.warning("Wake command sent but vehicle state unclear")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Failed to wake vehicle: {e}")
+            return False
+    
     def start_charging(self) -> bool:
         if self.dry:
             self.logger.info("[DRY-RUN] Would start charging for VIN %s", self.vin)
@@ -110,8 +183,14 @@ class TeslaClient:
             self.logger.info("Started charging for VIN %s", self.vin)
             return True
         except Exception as e:
+            # Check if this is the new Tesla Vehicle Command Protocol requirement
+            error_str = str(e).lower()
+            if "vehicle_command" in error_str or "signed_command" in error_str or "unauthorized" in error_str:
+                self.logger.error("Tesla deprecated simple REST commands in Oct 2023. Vehicle commands now require Tesla Vehicle Command Protocol with cryptographic keys.")
+                self.logger.error("Your system can read vehicle data but cannot send commands without implementing the new protocol.")
+                return False
             # If vehicle is asleep, try to wake it first
-            if "offline or asleep" in str(e).lower() or "unavailable" in str(e).lower():
+            elif "offline or asleep" in error_str or "unavailable" in error_str:
                 self.logger.info("Vehicle asleep/unavailable, attempting wake sequence...")
                 return self._wake_and_retry_command("charge_start")
             else:
@@ -193,8 +272,14 @@ class TeslaClient:
             self.logger.info("Stopped charging for VIN %s", self.vin)
             return True
         except Exception as e:
+            # Check if this is the new Tesla Vehicle Command Protocol requirement
+            error_str = str(e).lower()
+            if "vehicle_command" in error_str or "signed_command" in error_str or "unauthorized" in error_str:
+                self.logger.error("Tesla deprecated simple REST commands in Oct 2023. Vehicle commands now require Tesla Vehicle Command Protocol with cryptographic keys.")
+                self.logger.error("Your system can read vehicle data but cannot send commands without implementing the new protocol.")
+                return False
             # If vehicle is asleep, try to wake it first
-            if "offline or asleep" in str(e).lower() or "unavailable" in str(e).lower():
+            elif "offline or asleep" in error_str or "unavailable" in error_str:
                 self.logger.info("Vehicle asleep/unavailable, attempting wake sequence...")
                 return self._wake_and_retry_command("charge_stop")
             else:

@@ -75,23 +75,43 @@ class Scheduler:
                 else:
                     # Test mode - ignore daytime restrictions
                     self.logger.debug("Test mode: ignoring daytime restrictions")
-
                 # Get current time
                 now = datetime.now().strftime("%H:%M:%S")
 
                 # Get data
                 solar = self.solar_client.get_power()
-                vehicle = self.tesla_client.get_state()
-
-                # Parse data for display
+                
+                # Get Tesla data - poll if solar is high enough OR if we think Tesla is charging
                 solar_kw = solar.get("pv_production_w", 0) / 1000.0
+                wake_threshold_percent = self.config.get("tesla", {}).get("wake_threshold_percent", 95)  # Default 90%
+                wake_threshold_kw = self.controller.start_threshold_w / 1000.0 * wake_threshold_percent
+                
+                # Check if we should poll Tesla
+                should_poll_tesla = (
+                    solar_kw >= wake_threshold_kw or  # Solar is high enough
+                    self.controller._charging  # Or we think Tesla is currently charging
+                )
+                
+                if should_poll_tesla:
+                    # Poll Tesla (solar high enough or charging active)
+                    reason = "charging active" if self.controller._charging else "solar sufficient"
+                    self.logger.debug(f"Polling Tesla ({reason})")
+                    vehicle = self.tesla_client.get_state(wake_if_needed=True)
+                    plugged_in = vehicle.get("plugged_in", False)
+                    tesla_soc = vehicle.get("soc", 0)
+                    charging_state = vehicle.get("charging_state", "Unknown")
+                else:
+                    # Solar too low and not charging - don't poll Tesla at all (let it sleep)
+                    self.logger.debug(f"Solar too low ({solar_kw:.2f}kW < {wake_threshold_kw:.2f}kW) and not charging - not polling Tesla")
+                    vehicle = {"charging_state": "Sleeping", "plugged_in": False, "soc": 0}
+                    plugged_in = False
+                    tesla_soc = 0
+                    charging_state = "Sleeping"
+                
+                # Parse data for display
                 export_kw = solar.get("site_export_w")
                 if export_kw:
                     export_kw = export_kw / 1000.0
-                
-                tesla_soc = vehicle.get("soc", 0)
-                plugged_in = vehicle.get("plugged_in", False)
-                charging_state = vehicle.get("charging_state", "Unknown")
                 shift_state = vehicle.get("shift_state")
                 speed = vehicle.get("speed")
 
@@ -101,6 +121,7 @@ class Scheduler:
                     "site_export_w": solar.get("site_export_w"),
                     "vehicle_plugged_in": plugged_in,
                     "vehicle_soc": tesla_soc,
+                    "tesla_power_w": vehicle.get("charger_power", 0) * 1000,  # Convert kW to W
                 }
                 context["high_production"] = (context.get("site_export_w") or 0) > self.controller.start_threshold_w
 
@@ -122,7 +143,10 @@ class Scheduler:
                 # If shift_state and speed are None/null, vehicle_state_str stays empty
                 
                 # Determine display status and action
-                if not plugged_in:
+                if charging_state == "Sleeping":
+                    status = "Sleeping"
+                    display_action = f"Low Solar ({solar_kw:.3f}kW < {(self.controller.start_threshold_w / 1000.0 * self.config.get('tesla', {}).get('wake_threshold_percent', 0.95)):.2f}kW)"
+                elif not plugged_in:
                     status = "Unplugged"
                     display_action = "Waiting"
                 elif charging_state == "Charging":
@@ -140,8 +164,8 @@ class Scheduler:
                     status = charging_state
                     display_action = "Monitoring"
 
-                # Apply the control action
-                control_result = self.controller.apply_action(action, self.tesla_client)
+                # Apply the control action (pass context for logging)
+                control_result = self.controller.apply_action(action, self.tesla_client, context)
                 
                 # Determine control status
                 action_type = action.get("type") if isinstance(action, dict) else action
@@ -172,8 +196,14 @@ class Scheduler:
                 else:
                     vehicle_display = f" {'':11}"  # Empty space to maintain alignment
                 
+                # Format Tesla SOC display (show dash when sleeping)
+                if charging_state == "Sleeping":
+                    soc_display = "  --%"
+                else:
+                    soc_display = f"{tesla_soc:>3d}%"
+                
                 # Print status line
-                print(f"{now}     {solar_kw:>7.3f}kW {export_str:<12} {tesla_soc:>3d}%{vehicle_display}     {status:<10} {display_action:<25} {control_status}")
+                print(f"{now}     {solar_kw:>7.3f}kW {export_str:<12} {soc_display}{vehicle_display}     {status:<10} {display_action:<25} {control_status}")
 
                 sleep_s = self._poll_interval(context)
                 time.sleep(sleep_s)

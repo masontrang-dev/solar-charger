@@ -94,32 +94,58 @@
         .tesla-value { color: #1976d2; }
         .system-value { color: #4caf50; }
         
+        .status-low { color: #f44336; }
+        .status-close { color: #ff9800; }
+        .status-ready { color: #4caf50; }
+        .status-charging { color: #2196f3; }
+        
         .controls {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
-            margin-top: 15px;
         }
         
         .btn {
             padding: 10px 20px;
             border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
         }
         
-        .btn-primary { background: #2196f3; color: white; }
+        .tesla-value {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .tesla-sleeping {
+            color: #95a5a6;
+            font-style: italic;
+            font-weight: normal;
+        }
+        
         .btn-success { background: #4caf50; color: white; }
         .btn-danger { background: #f44336; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
         
-        .btn:hover {
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-active {
+            background: #28a745;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+        }
+        
+        .btn-inactive {
+            background: #6c757d;
         }
         
         .logs {
@@ -189,18 +215,22 @@
                     <span id="solarProduction" class="metric-value solar-value">0.0 kW</span>
                 </div>
                 <div class="metric">
-                    <span>Grid Export:</span>
-                    <span id="gridExport" class="metric-value solar-value">0.0 kW</span>
+                    <span>Start Threshold:</span>
+                    <span id="startThreshold" class="metric-value solar-value">1.8 kW</span>
                 </div>
                 <div class="metric">
                     <span>Status:</span>
                     <span id="solarStatus" class="metric-value">Monitoring</span>
                 </div>
+                <div class="metric">
+                    <span>To Charging:</span>
+                    <span id="toCharging" class="metric-value solar-value">Need +1.2 kW</span>
+                </div>
             </div>
             
             <!-- Tesla Panel -->
             <div class="card">
-                <h3>🚗 Tesla Status</h3>
+                <h3>🚗 Tesla Status <span id="teslaSleepingIndicator" class="tesla-sleeping" style="display: none;">(Sleeping)</span></h3>
                 <div class="metric">
                     <span>Battery Level:</span>
                     <span id="batteryLevel" class="metric-value tesla-value">0%</span>
@@ -215,11 +245,41 @@
                     <span id="pluggedIn" class="metric-value">Unknown</span>
                 </div>
                 
-                <div class="controls">
-                    <button class="btn btn-success" onclick="controlAction('start_charging')">🔋 Start Charging</button>
-                    <button class="btn btn-danger" onclick="controlAction('stop_charging')">⏹️ Stop Charging</button>
+                <!-- Charging Details (only show when charging) -->
+                <div id="chargingDetails" style="display: none;">
+                    <div class="metric">
+                        <span>Charging Power:</span>
+                        <span id="chargingPower" class="metric-value tesla-value">0.0 kW</span>
+                    </div>
+                    <div class="metric">
+                        <span>Current:</span>
+                        <span id="chargingCurrent" class="metric-value tesla-value">0A / 0A</span>
+                    </div>
+                    <div class="metric">
+                        <span>Voltage:</span>
+                        <span id="chargingVoltage" class="metric-value tesla-value">0V</span>
+                    </div>
+                    <div class="metric">
+                        <span>Charge Rate:</span>
+                        <span id="chargeRate" class="metric-value tesla-value">0 mi/hr</span>
+                    </div>
+                    <div class="metric">
+                        <span>Time to Full:</span>
+                        <span id="timeToFull" class="metric-value tesla-value">--</span>
+                    </div>
                 </div>
-            </div>
+                
+                <div class="controls">
+                    <button id="startBtn" class="btn btn-success" onclick="controlAction('start_charging')">
+                        🔋 Start charging
+                    </button>
+                    <button id="stopBtn" class="btn btn-danger" onclick="controlAction('stop_charging')">
+                        ⏹️ Stop charging
+                    </button>
+                    <button id="wakeBtn" class="btn btn-warning" onclick="wakeVehicle()" style="display: none;">
+                        🌅 Wake vehicle
+                    </button>
+                </div>
             
             <!-- System Panel -->
             <div class="card">
@@ -268,16 +328,58 @@
         function updateDashboard(data) {
             // Solar data
             const solarProd = (data.solar.pv_production_w || 0) / 1000;
-            const gridExport = (data.solar.site_export_w || 0) / 1000;
+            const startThreshold = (data.system.start_threshold_w || 1800) / 1000;
+            const stopThreshold = (data.system.stop_threshold_w || 1500) / 1000;
+            const isCharging = data.tesla.charging_state === 'Charging';
             
             document.getElementById('solarProduction').textContent = solarProd.toFixed(2) + ' kW';
-            document.getElementById('gridExport').textContent = gridExport.toFixed(2) + ' kW';
-            document.getElementById('solarStatus').textContent = solarProd > 0 ? 'Producing' : 'Idle';
+            document.getElementById('startThreshold').textContent = startThreshold.toFixed(1) + ' kW';
             
-            // Tesla data
-            document.getElementById('batteryLevel').textContent = (data.tesla.soc || 0) + '%';
-            document.getElementById('chargingState').textContent = data.tesla.charging_state || 'Unknown';
-            document.getElementById('pluggedIn').textContent = data.tesla.plugged_in ? 'Yes' : 'No';
+            // Smart status and progress to charging
+            updateSolarStatus(solarProd, startThreshold, stopThreshold, isCharging);
+            
+            // Tesla data - handle sleeping state specially
+            const isSleeping = data.tesla.charging_state === 'Sleeping';
+            const sleepingIndicator = document.getElementById('teslaSleepingIndicator');
+            
+            if (isSleeping) {
+                // Show sleeping indicator in header
+                sleepingIndicator.style.display = 'inline';
+                
+                // Show dashes for sleeping values
+                const batteryEl = document.getElementById('batteryLevel');
+                const chargingEl = document.getElementById('chargingState');
+                const pluggedEl = document.getElementById('pluggedIn');
+                
+                batteryEl.textContent = '--';
+                chargingEl.textContent = '';
+                pluggedEl.textContent = '--';
+                
+                // Apply sleeping style
+                batteryEl.className = 'metric-value tesla-sleeping';
+                chargingEl.className = 'metric-value tesla-sleeping';
+                pluggedEl.className = 'metric-value tesla-sleeping';
+            } else {
+                // Hide sleeping indicator in header
+                sleepingIndicator.style.display = 'none';
+                
+                // Show actual data when awake
+                const batteryEl = document.getElementById('batteryLevel');
+                const chargingEl = document.getElementById('chargingState');
+                const pluggedEl = document.getElementById('pluggedIn');
+                
+                batteryEl.textContent = (data.tesla.soc || 0) + '%';
+                chargingEl.textContent = data.tesla.charging_state || 'Unknown';
+                pluggedEl.textContent = data.tesla.plugged_in ? 'Yes' : 'No';
+                
+                // Apply normal Tesla style
+                batteryEl.className = 'metric-value tesla-value';
+                chargingEl.className = 'metric-value tesla-value';
+                pluggedEl.className = 'metric-value tesla-value';
+            }
+            
+            // Handle sleeping state for buttons
+            updateSleepingState(isSleeping);
             
             // Charging indicator
             const indicator = document.getElementById('chargingIndicator');
@@ -286,6 +388,12 @@
             } else {
                 indicator.className = 'charging-indicator charging-stopped';
             }
+            
+            // Update charging details
+            updateChargingDetails(data.tesla);
+            
+            // Update charging buttons based on current state
+            updateChargingButtons(data.tesla.charging_state || 'Unknown');
             
             // System data
             document.getElementById('systemMode').textContent = data.system.dry_run ? 'Dry Run' : 'Live Control';
@@ -299,6 +407,179 @@
             
             // Update logs
             updateLogs(data.logs);
+        }
+        
+        function updateSolarStatus(solarProd, startThreshold, stopThreshold, isCharging) {
+            const statusEl = document.getElementById('solarStatus');
+            const toChargingEl = document.getElementById('toCharging');
+            
+            if (isCharging) {
+                // Currently charging
+                statusEl.textContent = 'Charging Active';
+                statusEl.className = 'metric-value status-charging';
+                
+                const toStop = solarProd - stopThreshold;
+                if (toStop > 0) {
+                    toChargingEl.textContent = `${toStop.toFixed(2)} kW above stop`;
+                    toChargingEl.className = 'metric-value status-ready';
+                } else {
+                    toChargingEl.textContent = `Need +${Math.abs(toStop).toFixed(2)} kW to avoid stop`;
+                    toChargingEl.className = 'metric-value status-close';
+                }
+                
+            } else {
+                // Not charging
+                const toStart = solarProd - startThreshold;
+                
+                if (toStart >= 0) {
+                    statusEl.textContent = 'Ready to Charge!';
+                    statusEl.className = 'metric-value status-ready';
+                    toChargingEl.textContent = `${toStart.toFixed(2)} kW above threshold`;
+                    toChargingEl.className = 'metric-value status-ready';
+                    
+                } else if (toStart > -0.3) {
+                    statusEl.textContent = 'Close to Charging';
+                    statusEl.className = 'metric-value status-close';
+                    toChargingEl.textContent = `Need +${Math.abs(toStart).toFixed(2)} kW`;
+                    toChargingEl.className = 'metric-value status-close';
+                    
+                } else {
+                    statusEl.textContent = solarProd > 0 ? 'Producing' : 'No Solar';
+                    statusEl.className = 'metric-value status-low';
+                    toChargingEl.textContent = `Need +${Math.abs(toStart).toFixed(2)} kW`;
+                    toChargingEl.className = 'metric-value status-low';
+                }
+            }
+        }
+        
+        function updateChargingDetails(teslaData) {
+            const chargingDetails = document.getElementById('chargingDetails');
+            const isCharging = teslaData.charging_state === 'Charging';
+            const isSleeping = teslaData.charging_state === 'Sleeping';
+            
+            // Show/hide charging details based on charging state
+            chargingDetails.style.display = isCharging ? 'block' : 'none';
+            
+            if (isCharging) {
+                // Update charging power
+                const power = teslaData.charger_power || 0;
+                document.getElementById('chargingPower').textContent = power.toFixed(1) + ' kW';
+                
+                // Update current (actual / requested)
+                const actualCurrent = teslaData.charger_actual_current || 0;
+                const requestedCurrent = teslaData.charge_current_request || 0;
+                const maxCurrent = teslaData.charge_current_request_max || 0;
+                document.getElementById('chargingCurrent').textContent = 
+                    `${actualCurrent}A / ${requestedCurrent}A (max: ${maxCurrent}A)`;
+                
+                // Update voltage
+                const voltage = teslaData.charger_voltage || 0;
+                document.getElementById('chargingVoltage').textContent = voltage + 'V';
+                
+                // Update charge rate
+                const chargeRate = teslaData.charge_rate || 0;
+                document.getElementById('chargeRate').textContent = chargeRate + ' mi/hr';
+                
+                // Update time to full
+                const timeToFull = teslaData.time_to_full_charge || 0;
+                if (timeToFull > 0) {
+                    const hours = Math.floor(timeToFull);
+                    const minutes = Math.round((timeToFull - hours) * 60);
+                    document.getElementById('timeToFull').textContent = 
+                        hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                } else {
+                    document.getElementById('timeToFull').textContent = '--';
+                }
+            }
+        }
+        
+        function updateSleepingState(isSleeping) {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const wakeBtn = document.getElementById('wakeBtn');
+            
+            if (isSleeping) {
+                // Vehicle is sleeping - disable charging buttons, show wake button
+                startBtn.disabled = true;
+                stopBtn.disabled = true;
+                startBtn.textContent = 'Vehicle Sleeping';
+                stopBtn.textContent = 'Vehicle Sleeping';
+                wakeBtn.style.display = 'inline-block';
+            } else {
+                // Vehicle is awake - hide wake button
+                wakeBtn.style.display = 'none';
+            }
+        }
+        
+        function wakeVehicle() {
+            const wakeBtn = document.getElementById('wakeBtn');
+            wakeBtn.disabled = true;
+            wakeBtn.textContent = '🌅 Waking...';
+            
+            fetch('/api/wake_vehicle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Vehicle wake command sent successfully', 'success');
+                    // Re-enable button after a delay
+                    setTimeout(() => {
+                        wakeBtn.disabled = false;
+                        wakeBtn.textContent = '🌅 Wake Vehicle';
+                    }, 3000);
+                } else {
+                    showMessage('Failed to wake vehicle: ' + data.message, 'error');
+                    wakeBtn.disabled = false;
+                    wakeBtn.textContent = '🌅 Wake Vehicle';
+                }
+            })
+            .catch(error => {
+                showMessage('Error waking vehicle: ' + error, 'error');
+                wakeBtn.disabled = false;
+                wakeBtn.textContent = '🌅 Wake Vehicle';
+            });
+        }
+        
+        function updateChargingButtons(chargingState) {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            
+            // Reset classes
+            startBtn.className = 'btn';
+            stopBtn.className = 'btn';
+            startBtn.disabled = false;
+            stopBtn.disabled = false;
+            
+            if (chargingState === 'Charging' || chargingState === 'Starting') {
+                // Currently charging
+                startBtn.className = 'btn btn-success btn-active';
+                startBtn.textContent = '🔋 Charging Active';
+                startBtn.disabled = true;
+                
+                stopBtn.className = 'btn btn-danger';
+                stopBtn.textContent = '⏹️ Stop Charging';
+                
+            } else if (chargingState === 'Stopped' || chargingState === 'Complete' || chargingState === 'Disconnected') {
+                // Currently stopped
+                startBtn.className = 'btn btn-success';
+                startBtn.textContent = '🔋 Start Charging';
+                
+                stopBtn.className = 'btn btn-danger btn-inactive';
+                stopBtn.textContent = '⏹️ Already Stopped';
+                stopBtn.disabled = true;
+                
+            } else {
+                // Unknown state - enable both
+                startBtn.className = 'btn btn-success';
+                startBtn.textContent = '🔋 Start Charging';
+                
+                stopBtn.className = 'btn btn-danger';
+                stopBtn.textContent = '⏹️ Stop Charging';
+            }
         }
         
         function updateLogs(logs) {
@@ -317,13 +598,48 @@
         }
         
         function controlAction(action) {
+            // Disable buttons during action
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            
+            if (action === 'start_charging') {
+                startBtn.disabled = true;
+                startBtn.textContent = '🔄 Starting...';
+            } else if (action === 'stop_charging') {
+                stopBtn.disabled = true;
+                stopBtn.textContent = '🔄 Stopping...';
+            }
+            
             fetch(`/api/control/${action}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log('Control action result:', data);
+                    
+                    // Show result message
+                    if (data.message) {
+                        // You could add a toast notification here
+                        console.log(data.message);
+                    }
+                    
+                    // Update buttons based on new state if available
+                    if (data.current_state && data.current_state.charging_state) {
+                        updateChargingButtons(data.current_state.charging_state);
+                    } else {
+                        // Re-enable buttons if no state info
+                        startBtn.disabled = false;
+                        stopBtn.disabled = false;
+                        startBtn.textContent = '🔋 Start Charging';
+                        stopBtn.textContent = '⏹️ Stop Charging';
+                    }
                 })
                 .catch(error => {
                     console.error('Control action failed:', error);
+                    
+                    // Re-enable buttons on error
+                    startBtn.disabled = false;
+                    stopBtn.disabled = false;
+                    startBtn.textContent = '🔋 Start Charging';
+                    stopBtn.textContent = '⏹️ Stop Charging';
                 });
         }
         

@@ -15,15 +15,24 @@ A sophisticated Tesla charging automation system that intelligently controls you
 - **Live solar production** monitoring via SolarEdge API
 - **Tesla battery level** and charging state tracking
 - **Beautiful console display** with 10-second updates
+- **Web dashboard** with real-time updates and manual controls
 - **Optional vehicle state** display (driving/parked when available)
 - **Export power calculation** for accurate solar surplus detection
 
 ### ⚙️ **Advanced Configuration**
 - **Flexible thresholds** (start/stop watts configurable)
+- **Configurable wake threshold** (control when Tesla wakes from sleep)
 - **Multiple polling rates** (fast/medium/slow based on conditions)
 - **Daytime/nighttime** scheduling with sun time calculations
 - **Dry-run mode** for testing without actual Tesla control
 - **Comprehensive logging** with configurable levels
+
+### 🌐 **Web Dashboard**
+- **Real-time monitoring** with live updates via WebSocket
+- **Manual charging control** (start/stop charging buttons)
+- **Tesla wake management** with smart sleep detection
+- **Solar energy logging** with detailed session tracking
+- **Responsive design** works on desktop and mobile
 
 ### 🔐 **Enterprise-Grade Security**
 - **Tesla Fleet API** integration with OAuth 2.0
@@ -137,8 +146,12 @@ cd vehicle-command
 export TESLA_KEY_NAME=solarcharger
 ./tesla-http-proxy -tls-key config/tls-key.pem -cert config/tls-cert.pem -port 8080
 
-# Terminal 2: Start solar charger
+# Terminal 2: Start solar charger (console mode)
 .venv/bin/python run.py
+
+# OR Terminal 2: Start web dashboard
+.venv/bin/python web_dashboard.py
+# Then visit http://localhost:8091
 ```
 
 **That's it!** Your Tesla will now automatically charge when you have excess solar power.
@@ -266,13 +279,16 @@ export TESLA_KEY_NAME=solarcharger
        site_id: "YOUR_SITE_ID"
 
    control:
-     start_export_watts: 1800  # Start charging at 1.8kW surplus
-     stop_export_watts: 1500   # Stop charging at 1.5kW surplus
-     min_on_seconds: 600       # Minimum 10 minutes charging
-     min_off_seconds: 600      # Minimum 10 minutes off
-     max_soc: 80              # Stop at 80% battery
+    start_export_watts: 1800  # Start charging at 1.8kW surplus
+    stop_export_watts: 1500   # Stop charging at 1.5kW surplus
+    min_on_seconds: 600       # Minimum 10 minutes charging
+    min_off_seconds: 600      # Minimum 10 minutes off
+    max_soc: 80              # Stop at 80% battery
 
-   dry_run: false  # Set to true for testing
+  tesla:
+    wake_threshold_percent: 0.95  # Wake Tesla at 95% of charging threshold
+
+  dry_run: false  # Set to true for testing
    ```
 
 ## 🎯 Usage
@@ -288,7 +304,12 @@ export TESLA_KEY_NAME=solarcharger
 
 2. **Run Solar Charger**
    ```bash
+   # Console mode (automatic control)
    .venv/bin/python run.py
+   
+   # OR Web dashboard mode (manual + automatic control)
+   .venv/bin/python web_dashboard.py
+   # Then visit http://localhost:8091
    ```
 
 ### Monitor-Only Mode
@@ -345,6 +366,9 @@ control:
   min_on_seconds: 600         # Minimum charging duration
   min_off_seconds: 600        # Minimum off duration
   max_soc: 80                # Maximum battery level
+
+tesla:
+  wake_threshold_percent: 0.95  # Wake Tesla at 95% of charging threshold
 ```
 
 ### Polling Rates
@@ -423,11 +447,18 @@ If you need to manually refresh tokens:
 ## 🛠️ Utility Scripts
 
 ### 🚀 **Daily Use Scripts**
-- **`run.py`** - Main solar charger system with auto-refresh
+- **`run.py`** - Main solar charger system (console mode)
   ```bash
   .venv/bin/python run.py
   ```
-  **This is all you need to run daily!** Includes automatic token refresh and smart Tesla wake-up.
+  **Console mode** with automatic charging control and smart Tesla wake-up.
+
+- **`web_dashboard.py`** - Web dashboard with manual controls
+  ```bash
+  .venv/bin/python web_dashboard.py
+  # Visit http://localhost:8091
+  ```
+  **Web dashboard** with real-time monitoring, manual charging controls, and solar logging.
 
 - **`refresh_tokens.py`** - Manual token refresh (rarely needed)
   ```bash
@@ -467,14 +498,14 @@ If you need to manually refresh tokens:
   ```
   Use if Tesla commands suddenly stop working.
 
-### 🗑️ **Scripts You Can Delete**
-These scripts were used for setup and debugging but are no longer needed:
-- `exchange_code_for_tokens.py` - Replaced by `tesla_oauth_simple.py`
-- `tesla_oauth_setup.py` - Replaced by `tesla_oauth_simple.py`
-- `refresh_tesla_token.py` - Replaced by `refresh_tokens.py`
-- `debug_tesla_oauth.py` - One-time debugging script
-- `check_tesla_app.py` - One-time debugging script
-- `wake_tesla.py` - Now integrated into `run.py`
+### 📁 **Archived Scripts**
+Old scripts have been organized into the `archive/` folder for reference:
+- `archive/debug/` - Development debugging scripts
+- `archive/tests/` - Old test scripts (replaced by better alternatives)
+- `archive/old-oauth/` - Deprecated OAuth implementations
+- `archive/utilities/` - Duplicate utility scripts
+
+See `archive/README.md` for details on what each archived script does.
 
 ### 📅 **What to Run When**
 
@@ -483,7 +514,8 @@ These scripts were used for setup and debugging but are no longer needed:
 2. `tesla_register.py` - Register domain with Tesla
 
 **Daily Operation**
-- `run.py` - **This is all you need!** Handles everything automatically
+- `run.py` - **Console mode** with automatic charging control
+- `web_dashboard.py` - **Web dashboard** with manual controls and monitoring
 
 **Troubleshooting (Rarely)**
 - `test_proxy_commands.py` - If Tesla commands fail
@@ -494,22 +526,40 @@ These scripts were used for setup and debugging but are no longer needed:
 
 ```
 solar-charger/
-├── clients/
+├── clients/                  # API client modules
 │   ├── solaredge_cloud.py    # SolarEdge API client
 │   ├── solaredge_modbus.py   # SolarEdge Modbus client  
 │   └── tesla.py              # Tesla Fleet API client
-├── utils/
-│   └── time_windows.py       # Daytime calculations
-├── vehicle-command/          # Tesla HTTP proxy tools
+├── utils/                    # Utility modules
+│   ├── time_windows.py       # Daytime calculations
+│   ├── solar_logger.py       # Solar energy session logging
+│   ├── logging_config.py     # Logging configuration
+│   └── token_manager.py      # Tesla token management
+├── templates/                # Web dashboard templates
+│   └── dashboard.html        # Web dashboard template
+├── archive/                  # Old scripts (organized for reference)
+│   ├── debug/               # Development debugging scripts
+│   ├── tests/               # Old test scripts
+│   ├── old-oauth/           # Deprecated OAuth implementations
+│   ├── utilities/           # Duplicate utility scripts
+│   └── README.md            # Archive documentation
+├── vehicle-command/          # Tesla HTTP proxy tools (external)
 ├── tesla-fleet-api/          # Public key hosting (deploy to Netlify)
 ├── config.yaml              # Main configuration
 ├── controller.py            # Charging logic
 ├── scheduler.py             # Main automation loop
 ├── monitor.py              # Monitor-only mode
-├── run.py                  # Application entry point
+├── run.py                  # Console mode entry point
+├── web_dashboard.py         # Web dashboard entry point
+├── view_solar_logs.py       # View solar charging session logs
 ├── generate_tesla_keys.py   # Setup: OAuth token generation
 ├── tesla_register.py        # Setup: Domain registration
+├── tesla_oauth_simple.py    # Setup: OAuth token generation
 ├── test_proxy_commands.py   # Debug: Test Tesla commands
+├── test_wake_commands.py    # Debug: Test wake commands
+├── tesla_check_registration.py # Debug: Check Tesla registration
+├── tesla_command_signer.py  # Utility: Command signing
+├── refresh_tokens.py        # Utility: Token refresh
 └── debug_solar.py          # Debug: Test SolarEdge API
 ```
 

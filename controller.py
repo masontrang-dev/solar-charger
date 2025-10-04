@@ -1,5 +1,6 @@
 import logging
 import time
+from utils.solar_logger import SolarChargingLogger
 
 
 class Controller:
@@ -31,6 +32,10 @@ class Controller:
 
         self._charging = False
         self._last_change_ts = 0.0
+        
+        # Initialize solar logger
+        self.solar_logger = SolarChargingLogger()
+        self._last_log_time = 0.0
 
     def _enforce_hysteresis(self, want_on: bool) -> bool:
         now = time.time()
@@ -78,21 +83,39 @@ class Controller:
         # Future: dynamic amps
         return {"type": "none"}
 
-    def apply_action(self, action: dict, tesla_client):
+    def apply_action(self, action: dict, tesla_client, ctx: dict = None):
         t = action.get("type")
+        
+        # Get context data for logging
+        solar_power_w = ctx.get("pv_production_w", 0) if ctx else 0
+        tesla_soc = ctx.get("vehicle_soc", 0) if ctx else 0
+        tesla_power_w = ctx.get("tesla_power_w", 0) if ctx else 0  # From Tesla charging power
+        
         if t == "start":
             self.logger.info("Starting charge (%s)", action.get("reason"))
             if tesla_client.start_charging():
                 self._charging = True
                 self._last_change_ts = time.time()
+                # Start logging session
+                self.solar_logger.start_charging_session(solar_power_w, tesla_soc, tesla_power_w)
         elif t == "stop":
             self.logger.info("Stopping charge (%s)", action.get("reason"))
             if tesla_client.stop_charging():
                 self._charging = False
                 self._last_change_ts = time.time()
+                # End logging session
+                self.solar_logger.end_charging_session(solar_power_w, tesla_soc, tesla_power_w)
         elif t == "set_amps":
             amps = action.get("amps")
             self.logger.info("Setting charge amps to %s", amps)
             tesla_client.set_charging_amps(amps)
         else:
             self.logger.debug("No action")
+        
+        # Log ongoing charging data (every ~10 seconds)
+        if self._charging and ctx:
+            now = time.time()
+            if now - self._last_log_time >= 10:  # Log every 10 seconds
+                interval = int(now - self._last_log_time) if self._last_log_time > 0 else 10
+                self.solar_logger.log_charging_sample(solar_power_w, tesla_soc, tesla_power_w, interval)
+                self._last_log_time = now
