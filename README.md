@@ -2,7 +2,14 @@
 
 A sophisticated Tesla charging automation system that intelligently controls your Tesla's charging based on real-time solar production data. Maximize your solar investment by charging your Tesla only when you have excess solar power!
 
-## ✨ Features
+### ✨ Features
+
+### 🔄 **API Efficiency & Reliability**
+- **Intelligent rate limiting** - Prevents hitting SolarEdge API rate limits
+- **Smart response caching** - Reduces API calls with configurable TTL
+- **Exponential backoff** - Automatically handles rate limit responses
+- **Request throttling** - Ensures minimum time between API calls
+- **Robust error handling** - Graceful degradation during API issues
 
 ### 🔋 **Smart Charging Control**
 - **Dynamic amperage control** - Automatically adjusts charging current based on available solar
