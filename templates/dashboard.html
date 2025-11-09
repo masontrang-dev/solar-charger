@@ -450,9 +450,36 @@
             updateLogs(data.logs);
         }
         
-        function updateSolarStatus(solarProd, startThreshold, stopThreshold, isCharging) {
+        function updateSolarStatus(solarProd, startThreshold, stopThreshold, isCharging, solarData = {}) {
             const statusEl = document.getElementById('solarStatus');
             const toChargingEl = document.getElementById('toCharging');
+            const connectionStatusEl = document.getElementById('solarConnectionStatus');
+            const errorEl = document.getElementById('solarError');
+            
+            // Handle connection status
+            if (solarData.connection_status === 'error') {
+                connectionStatusEl.textContent = 'Connection Error';
+                connectionStatusEl.className = 'status-badge status-error';
+                connectionStatusEl.style.display = 'inline-block';
+                errorEl.textContent = solarData.error_message || 'Unable to connect to SolarEdge';
+                errorEl.style.display = 'block';
+                
+                // Show error state
+                statusEl.textContent = 'Connection Error';
+                statusEl.className = 'metric-value status-error';
+                toChargingEl.textContent = 'Check connection';
+                toChargingEl.className = 'metric-value status-error';
+                return;
+            } else if (solarData.connection_status === 'connected') {
+                connectionStatusEl.textContent = 'Connected';
+                connectionStatusEl.className = 'status-badge status-running';
+                connectionStatusEl.style.display = 'inline-block';
+                errorEl.style.display = 'none';
+            } else {
+                // Unknown status
+                connectionStatusEl.style.display = 'none';
+                errorEl.style.display = 'none';
+            }
             
             if (isCharging) {
                 // Currently charging

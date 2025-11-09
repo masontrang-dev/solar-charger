@@ -1,3 +1,4 @@
+import json
 import logging
 import requests
 import yaml
@@ -7,7 +8,7 @@ import time
 # Disable SSL warnings for Tesla HTTP proxy self-signed certificate
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 class TeslaClient:
     BASE_URL = "https://fleet-api.prd.na.vn.cloud.tesla.com"
@@ -84,36 +85,127 @@ class TeslaClient:
             "Content-Type": "application/json"
         }
     
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
-    def _get(self, path: str):
+    def _refresh_token(self):
+        """Refresh the access token using the refresh token"""
+        if not self.refresh_token or not self.client_id or not self.client_secret:
+            self.logger.error("Cannot refresh token: missing refresh token or client credentials")
+            return False
+            
+        try:
+            self.logger.info("Refreshing Tesla access token...")
+            response = requests.post(
+                "https://auth.tesla.com/oauth2/v3/token",
+                json={
+                    "grant_type": "refresh_token",
+                    "client_id": self.client_id,
+                    "refresh_token": self.refresh_token,
+                    "client_secret": self.client_secret
+                },
+                timeout=10
+            )
+            response.raise_for_status()
+            
+            token_data = response.json()
+            self.access_token = token_data["access_token"]
+            self.refresh_token = token_data.get("refresh_token", self.refresh_token)
+            
+            # Update config with new tokens
+            if hasattr(self, 'config') and 'tesla' in self.config and 'api' in self.config['tesla']:
+                self.config['tesla']['api']['access_token'] = self.access_token
+                self.config['tesla']['api']['refresh_token'] = self.refresh_token
+                
+            self.logger.info("Successfully refreshed Tesla access token")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to refresh Tesla token: {str(e)}")
+            return False
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=8),
+        retry=retry_if_exception_type((requests.exceptions.RequestException, json.JSONDecodeError))
+    )
+    def _get(self, path: str, retry_on_401: bool = True):
+        """Make a GET request to the Tesla API with retry and token refresh"""
         url = f"{self.BASE_URL}{path}"
+        
+        # Return cached data if available and fresh
         if path in self._last_data and time.time() - self._last_poll_time < self._min_poll_interval:
             self.logger.debug(f"Returning cached data for {path}")
             return self._last_data[path]
         
+        self.logger.debug(f"Making GET request to {url}")
         response = requests.get(url, headers=self._headers(), timeout=10)
-        response.raise_for_status()
-        return response.json()
+        
+        # Handle 401 Unauthorized (token might be expired)
+        if response.status_code == 401 and retry_on_401:
+            self.logger.warning("Received 401 Unauthorized, attempting token refresh...")
+            if self._refresh_token():
+                # Retry the request with the new token
+                return self._get(path, retry_on_401=False)
+        
+        # Handle other errors
+        try:
+            response.raise_for_status()
+            data = response.json()
+            
+            # Cache successful responses
+            self._last_data[path] = data
+            self._last_poll_time = time.time()
+            
+            return data
+            
+        except requests.exceptions.HTTPError as e:
+            self.logger.error(f"Tesla API error ({response.status_code}): {response.text}")
+            raise
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse Tesla API response: {response.text}")
+            raise
     
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
-    def _post(self, path: str, data: dict = None):
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=8),
+        retry=retry_if_exception_type((requests.exceptions.RequestException, json.JSONDecodeError))
+    )
+    def _post(self, path: str, data: dict = None, retry_on_401: bool = True):
+        """Make a POST request to the Tesla API with retry and token refresh"""
         # Use Tesla HTTP proxy for command endpoints
         if "/command/" in path:
             url = f"{self.PROXY_URL}{path}"
-            response = requests.post(
-                url, 
-                headers=self._headers(), 
-                json=data or {}, 
-                timeout=10,
-                verify=False  # Skip SSL verification for self-signed cert
-            )
+            verify_ssl = False  # Skip SSL verification for self-signed cert
         else:
             # Use direct Fleet API for non-command endpoints
             url = f"{self.BASE_URL}{path}"
-            response = requests.post(url, headers=self._headers(), json=data or {}, timeout=10)
+            verify_ssl = True
         
-        response.raise_for_status()
-        return response.json()
+        self.logger.debug(f"Making POST request to {url}")
+        response = requests.post(
+            url, 
+            headers=self._headers(), 
+            json=data or {}, 
+            timeout=10,
+            verify=verify_ssl
+        )
+        
+        # Handle 401 Unauthorized (token might be expired)
+        if response.status_code == 401 and retry_on_401:
+            self.logger.warning("Received 401 Unauthorized, attempting token refresh...")
+            if self._refresh_token():
+                # Retry the request with the new token
+                return self._post(path, data, retry_on_401=False)
+        
+        # Handle other errors
+        try:
+            response.raise_for_status()
+            return response.json()
+            
+        except requests.exceptions.HTTPError as e:
+            self.logger.error(f"Tesla API error ({response.status_code}): {response.text}")
+            raise
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse Tesla API response: {response.text}")
+            raise
 
     def get_state(self, wake_if_needed: bool = True) -> dict:
         if not self.access_token or not self.vin:

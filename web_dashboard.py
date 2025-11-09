@@ -138,11 +138,31 @@ def update_system_data():
         # Get solar data (use correct method name)
         if 'solar' in clients:
             try:
-                solar_data = clients['solar'].get_power()
-                system_data['solar'] = solar_data
+                # First check if we can connect to SolarEdge
+                if not hasattr(clients['solar'], 'last_connection_success') or clients['solar'].last_connection_success is None:
+                    # Test connection if we haven't already
+                    clients['solar'].test_connection()
+                
+                if hasattr(clients['solar'], 'last_connection_success') and not clients['solar'].last_connection_success:
+                    # Connection failed
+                    system_data['solar'] = {
+                        'pv_production_w': 0,
+                        'connection_status': 'error',
+                        'error_message': 'Unable to connect to SolarEdge API'
+                    }
+                    add_log("SolarEdge connection failed - showing error state in UI", "warning")
+                else:
+                    # Connection is good, get power data
+                    solar_data = clients['solar'].get_power()
+                    solar_data['connection_status'] = 'connected'
+                    system_data['solar'] = solar_data
             except Exception as e:
                 add_log(f"Solar client error: {e}", "error")
-                system_data['solar'] = {'pv_production_w': 0}
+                system_data['solar'] = {
+                    'pv_production_w': 0,
+                    'connection_status': 'error',
+                    'error_message': str(e)
+                }
         
         # Get Tesla data - poll if solar is high enough OR if Tesla might be charging
         if 'tesla' in clients:

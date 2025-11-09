@@ -188,9 +188,25 @@ def main():
         logger.error("Failed to ensure valid Tesla tokens")
         sys.exit(1)
 
+    # Test SolarEdge connection
+    logger.info("☀️ Testing SolarEdge connection...")
+    from clients.solaredge_cloud import SolarEdgeCloudClient
+    solar_client = SolarEdgeCloudClient(config)
+    solar_connected = solar_client.test_connection()
+    
+    if not solar_connected and not config.get('dry_run', False):
+        logger.warning("⚠️  SolarEdge connection failed. The system will run in degraded mode with limited functionality.")
+        logger.warning("    Solar production data will not be available, and charging decisions will be affected.")
+    
     # Wake up Tesla if needed before starting
+    if not solar_connected and not args.force_wake:
+        logger.info("🚗 SolarEdge unavailable - will attempt to wake Tesla to check status...")
+        force_wake = True
+    else:
+        force_wake = args.force_wake
+        
     logger.info("🚗 Checking Tesla vehicle status...")
-    wake_tesla_if_needed(config, logger, args.force_wake)
+    wake_tesla_if_needed(config, logger, force_wake)
 
     stop_event = threading.Event()
 

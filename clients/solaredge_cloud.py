@@ -32,11 +32,16 @@ class SolarEdgeCloudClient:
     CACHE_TTL = 300  # 5 minutes cache TTL
     
     def __init__(self, config: dict):
-        self.api_key = config.get("solaredge_api_key")
-        self.site_id = config.get("solaredge_site_id")
+        # Get nested config values with fallbacks
+        solaredge_config = config.get("solaredge", {})
+        cloud_config = solaredge_config.get("cloud", {})
+        
+        self.api_key = cloud_config.get("api_key") or config.get("solaredge_api_key")
+        self.site_id = cloud_config.get("site_id") or config.get("solaredge_site_id")
+        
+        # Initialize other instance variables
         self._cache = {}
         self._last_request_time = 0
-        self._circuit_open_until = 0
         self._failure_count = 0
         self.logger = logging.getLogger("solar")
         # Rate limiting - 2 minutes between requests to stay under 300/day (11h window)
@@ -46,6 +51,8 @@ class SolarEdgeCloudClient:
         self._max_consecutive_errors = 3
         self._circuit_reset_time = 300  # 5 minutes circuit breaker reset
         self._jitter_range = (0.5, 1.5)  # Random jitter to prevent thundering herd
+        self.last_connection_success = None  # Track last connection status
+        self.last_error_message = None  # Track last error message
     def _check_circuit_breaker(self):
         """Check if the circuit breaker is open."""
         now = time.time()
@@ -186,6 +193,52 @@ class SolarEdgeCloudClient:
             self.logger.error(f"Request failed: {str(e)}")
             raise
 
+    def test_connection(self) -> bool:
+        """Test the connection to SolarEdge API and verify credentials.
+        
+        Returns:
+            bool: True if connection and credentials are valid, False otherwise
+        """
+        if not self.api_key or not self.site_id:
+            error_msg = "SolarEdge API key or site ID not configured"
+            self.logger.error(error_msg)
+            self.last_connection_success = False
+            self.last_error_message = error_msg
+            return False
+            
+        try:
+            # Try to get site details which is a lightweight endpoint
+            self.logger.info("Testing SolarEdge API connection...")
+            data = self._get(
+                f"/site/{self.site_id}/details.json",
+                {},
+                cache_ttl=0  # Don't cache the test request
+            )
+            
+            # Check if the response contains valid site data
+            response_id = str(data.get('details', {}).get('id', '')).strip()
+            expected_id = str(self.site_id).strip()
+            
+            if data and response_id == expected_id:
+                self.logger.info("✅ SolarEdge connection successful")
+                self.last_connection_success = True
+                self.last_error_message = None
+                return True
+            else:
+                error_msg = f"Site ID mismatch. Expected: {expected_id}, Got: {response_id if response_id else 'None'}"
+                self.logger.error(f"Invalid response from SolarEdge API - {error_msg}")
+                self.logger.debug(f"Full response: {data}")
+                self.last_connection_success = False
+                self.last_error_message = error_msg
+                return False
+            
+        except Exception as e:
+            error_msg = str(e)
+            self.logger.error(f"SolarEdge connection test failed: {error_msg}")
+            self.last_connection_success = False
+            self.last_error_message = error_msg
+            return False
+            
     def get_power(self) -> dict:
         """Get current power data with caching and rate limiting."""
         if not self.api_key or not self.site_id:
