@@ -16,12 +16,36 @@ tesla:
     access_token: "your-tesla-access-token"
     refresh_token: "your-tesla-refresh-token"
   vehicle_vin: "YOUR_TESLA_VIN"
+  charging_voltage: 240  # Your actual charging voltage (240V, 208V, or 120V)
+  wake_threshold_percent: 0.95  # Wake Tesla at 95% of charging threshold
+
+# Tesla High Power Wall Connector (HPWC) - Optional
+# Provides plug detection and monitoring to reduce Tesla API calls
+hpwc:
+  enabled: false              # Set to true to enable HPWC monitoring
+  ip_address: "192.168.5.144" # Local IP address of your HPWC
+  timeout: 3                  # Request timeout in seconds
+  use_proxy: false            # Set to true if HPWC requires proxy access
+  proxy_url: "http://localhost:8099"  # Proxy URL (e.g., http://localhost:8099)
 
 control:
-  mode: "threshold" # options: "threshold" or "dynamic_amps"
-  # Thresholds use net export if available, otherwise PV production
+  mode: "dynamic"  # options: "threshold" or "dynamic"
+  house_baseline_w: 400  # House baseline load to reserve (watts)
+  
+  # Dynamic mode: Automatically adjusts amperage based on available solar
+  # Calculation: amps = (solar_production - house_baseline) / charging_voltage
+  # Example: (2000W - 400W) / 240V = 6.67A → 6A
+  dynamic_charging:
+    enabled: true
+    min_amps: 5      # Minimum charging amperage (won't start below this)
+    max_amps: 48     # Maximum charging amperage (your charger limit)
+    min_watts: 1200  # Minimum power to start charging (5A * 240V = 1200W)
+  
+  # Threshold mode (legacy): Simple on/off based on fixed thresholds
   start_export_watts: 1800  # Start charging at 1.8kW surplus
   stop_export_watts: 1500   # Stop charging at 1.5kW surplus
+  
+  # Common settings for both modes
   min_on_seconds: 600       # Minimum 10 minutes charging
   min_off_seconds: 600      # Minimum 10 minutes off
   max_soc: 80              # Stop at 80% battery
@@ -36,24 +60,23 @@ control:
     sunset_offset_min: 30     # End 30min after sunset
 
 polling:
-  night_sleep: true
-  test_poll: false
-  fast_seconds: 30
-  medium_seconds: 60
-  slow_seconds: 120
+  # Dashboard update frequency (how often frontend receives updates)
+  dashboard_interval: 10    # Push updates to frontend every 10 seconds
+  
+  # SolarEdge polling (adaptive based on time of day)
+  solar_day_interval: 60    # Poll every 1 minute during daytime
+  solar_night_interval: 300 # Poll every 5 minutes at night
+  
+  # Tesla polling (adaptive based on charging state)
+  tesla_charging_interval: 60    # Poll every 1 minute when actively charging
+  tesla_idle_interval: 300       # Poll every 5 minutes when idle/sleeping
+  tesla_max_calls_per_day: 50    # Daily API call limit
+  
+  # HPWC polling (local, always fast)
+  hpwc_interval: 5          # Poll every 5 seconds (local, no rate limits)
 
 dry_run: true  # Set to false when ready for real control
-test_mode: false  # Enable for testing with custom test values
-
-# Test mode configuration (only used when test_mode: true)
-test_control:
-  start_export_watts: 200   # Start charging at 200W in test mode
-  stop_export_watts: 150    # Stop charging at 150W in test mode  
-  min_on_seconds: 30        # Minimum 30 seconds on in test mode
-  min_off_seconds: 30       # Minimum 30 seconds off in test mode
-
-test_polling:
-  poll_seconds: 5           # Poll every 5 seconds in test mode
+dev_mode: false  # Set to true to always poll Tesla (ignores solar threshold)
 
 logging:
   level: INFO

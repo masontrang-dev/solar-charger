@@ -7,6 +7,142 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            /* === DESIGN SYSTEM === */
+            
+            /* Spacing Scale (8px grid) */
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 24px;
+            --space-6: 32px;
+            --space-7: 48px;
+            --space-8: 64px;
+            
+            /* Typography Scale */
+            --text-xs: 0.75rem;    /* 12px */
+            --text-sm: 0.875rem;   /* 14px */
+            --text-base: 1rem;     /* 16px */
+            --text-lg: 1.125rem;   /* 18px */
+            --text-xl: 1.25rem;    /* 20px */
+            --text-2xl: 1.5rem;    /* 24px */
+            --text-3xl: 1.875rem;  /* 30px */
+            --text-4xl: 2.25rem;   /* 36px */
+            --text-5xl: 3rem;      /* 48px */
+            
+            /* Font Weights */
+            --font-normal: 400;
+            --font-medium: 500;
+            --font-semibold: 600;
+            --font-bold: 700;
+            
+            /* Border Radius */
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-2xl: 24px;
+            --radius-full: 9999px;
+            
+            /* Elevation (Shadows) */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            
+            /* Light Theme (Solar/Day Mode) */
+            --bg-gradient-start: #fef3c7;
+            --bg-gradient-mid: #fde68a;
+            --bg-gradient-end: #fcd34d;
+            --bg-overlay-1: rgba(251, 191, 36, 0.1);
+            --bg-overlay-2: rgba(245, 158, 11, 0.1);
+            
+            /* Semantic Colors - Light */
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --text-tertiary: #9ca3af;
+            --text-inverse: #ffffff;
+            
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            
+            --border-primary: #e5e7eb;
+            --border-secondary: #d1d5db;
+            
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --card-shadow: var(--shadow-lg);
+            
+            --header-text: #111827;
+            --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            
+            /* Status Colors - Light */
+            --color-success: #10b981;
+            --color-success-bg: #d1fae5;
+            --color-success-border: #6ee7b7;
+            
+            --color-warning: #f59e0b;
+            --color-warning-bg: #fef3c7;
+            --color-warning-border: #fcd34d;
+            
+            --color-error: #ef4444;
+            --color-error-bg: #fee2e2;
+            --color-error-border: #fca5a5;
+            
+            --color-info: #3b82f6;
+            --color-info-bg: #dbeafe;
+            --color-info-border: #93c5fd;
+        }
+        
+        [data-theme="dark"] {
+            /* Dark Theme (Night Mode) */
+            --bg-gradient-start: #0f172a;
+            --bg-gradient-mid: #1e293b;
+            --bg-gradient-end: #334155;
+            --bg-overlay-1: rgba(59, 130, 246, 0.1);
+            --bg-overlay-2: rgba(139, 92, 246, 0.1);
+            
+            /* Semantic Colors - Dark */
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #64748b;
+            --text-inverse: #0f172a;
+            
+            --bg-primary: #1e293b;
+            --bg-secondary: #0f172a;
+            --bg-tertiary: #334155;
+            
+            --border-primary: #334155;
+            --border-secondary: #475569;
+            
+            --card-bg: rgba(30, 41, 59, 0.8);
+            --card-border: rgba(148, 163, 184, 0.1);
+            --card-shadow: var(--shadow-2xl);
+            
+            --header-text: #ffffff;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            
+            /* Status Colors - Dark */
+            --color-success: #34d399;
+            --color-success-bg: rgba(16, 185, 129, 0.1);
+            --color-success-border: rgba(52, 211, 153, 0.3);
+            
+            --color-warning: #fbbf24;
+            --color-warning-bg: rgba(245, 158, 11, 0.1);
+            --color-warning-border: rgba(251, 191, 36, 0.3);
+            
+            --color-error: #f87171;
+            --color-error-bg: rgba(239, 68, 68, 0.1);
+            --color-error-border: rgba(248, 113, 113, 0.3);
+            
+            --color-info: #60a5fa;
+            --color-info-bg: rgba(59, 130, 246, 0.1);
+            --color-info-border: rgba(96, 165, 250, 0.3);
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -14,90 +150,243 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-mid) 50%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
-            color: #333;
+            color: var(--text-primary);
+            padding: 0;
+            overflow-x: hidden;
+            transition: background 0.5s ease, color 0.3s ease;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, var(--bg-overlay-1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, var(--bg-overlay-2) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+            transition: background 0.5s ease;
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
         }
         
         .header {
             text-align: center;
-            color: white;
-            margin-bottom: 30px;
+            color: var(--header-text);
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+            position: relative;
         }
         
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: var(--text-5xl);
+            margin-bottom: var(--space-2);
+            font-weight: var(--font-bold);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
         }
         
-        .status-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-left: 10px;
+        .header p {
+            color: var(--text-tertiary);
+            font-size: 1.1rem;
+            font-weight: 400;
         }
         
-        .status-running { background: #4CAF50; color: white; }
-        .status-error { background: #f44336; color: white; }
-        .status-starting { background: #ff9800; color: white; }
+        .theme-toggle {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 2rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px var(--card-shadow);
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px var(--card-shadow);
+        }
+        
+        .theme-toggle-text {
+            font-size: 0.875rem;
+            border-color: var(--color-success-border);
+        }
+        
+        [data-theme="light"] .status-running {
+            background: var(--color-success);
+            color: var(--text-inverse);
+            border-color: var(--color-success);
+        }
+        .status-error { 
+            background: var(--color-error-bg);
+            color: var(--color-error);
+            border-color: var(--color-error-border);
+        }
+        
+        [data-theme="light"] .status-error {
+            background: var(--color-error);
+            color: var(--text-inverse);
+            border-color: var(--color-error);
+        }
+        .status-starting { 
+            background: var(--color-warning-bg);
+            color: var(--color-warning);
+            border-color: var(--color-warning-border);
+        }
+        
+        [data-theme="light"] .status-starting {
+            background: var(--color-warning);
+            color: var(--text-inverse);
+            border-color: var(--color-warning);
+        }
+        
+        /* Glow effects only in dark mode */
+        [data-theme="dark"] .status-running:hover {
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+        [data-theme="dark"] .status-error:hover {
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        [data-theme="dark"] .status-starting:hover {
+            box-shadow: 0 4px 12px rgba(251, 146, 60, 0.4);
+        }
         
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
         
         .card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-xl);
+            padding: var(--space-6);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         
         .card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            opacity: 0.8;
+        }
+        
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent 70%);
+            pointer-events: none;
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+            border-color: rgba(148, 163, 184, 0.2);
         }
         
         .card h3 {
-            margin-bottom: 15px;
-            color: #333;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
+            margin-bottom: var(--space-4);
+            color: var(--text-primary);
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            line-height: 1.4;
+        }
+        
+        .card h2 {
+            margin-bottom: var(--space-5);
+            color: var(--text-primary);
+            font-size: var(--text-2xl);
+            font-weight: var(--font-bold);
+            line-height: 1.3;
         }
         
         .metric {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 10px 0;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            margin: 0.75rem 0;
+            padding: 1rem 1.25rem;
+            background: var(--metric-bg);
+            border-radius: 0.875rem;
+            border: 1px solid var(--card-border);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .metric:hover {
+            background: var(--metric-hover-bg);
+            border-color: var(--card-border);
+            transform: translateX(6px);
+        }
+        
+        .metric span:first-child {
+            color: var(--text-secondary);
+            font-weight: var(--font-medium);
+            font-size: var(--text-base);
         }
         
         .metric-value {
-            font-weight: bold;
-            font-size: 1.2em;
+            font-weight: var(--font-bold);
+            font-size: var(--text-lg);
+            letter-spacing: -0.02em;
         }
         
-        .solar-value { color: #ff9800; }
-        .tesla-value { color: #1976d2; }
-        .system-value { color: #4caf50; }
+        .solar-value { 
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+        }
+        .tesla-value { 
+            color: #60a5fa;
+            text-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+        }
+        .system-value { 
+            color: #34d399;
+            text-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+        }
         
-        .status-low { color: #f44336; }
-        .status-close { color: #ff9800; }
-        .status-ready { color: #4caf50; }
-        .status-charging { color: #2196f3; }
+        .status-low { color: #f87171; }
+        .status-close { color: #fb923c; }
+        .status-ready { color: #4ade80; }
+        .status-charging { color: #38bdf8; }
         
         .controls {
             display: flex;
@@ -106,22 +395,40 @@
         }
         
         .btn {
-            padding: 10px 20px;
-            border: none;
-            transition: all 0.3s ease;
+            padding: var(--space-3) var(--space-5);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            font-weight: var(--font-semibold);
+            font-size: var(--text-base);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            white-space: nowrap;
         }
         
-        .tesla-value {
-            color: #e74c3c;
-            font-weight: bold;
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
         }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-sm);
+        }
+        
         
         .tesla-sleeping {
-            color: #95a5a6;
+            color: #64748b;
             font-style: italic;
-            font-weight: normal;
+            font-weight: var(--font-medium);
         }
         
         .loading-spinner {
@@ -139,13 +446,116 @@
             100% { transform: rotate(360deg); }
         }
         
-        .btn-success { background: #4caf50; color: white; }
-        .btn-danger { background: #f44336; color: white; }
-        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { 
+            background: var(--color-success);
+            color: var(--text-inverse);
+            border-color: var(--color-success);
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+            border-color: #059669;
+        }
+        
+        [data-theme="dark"] .btn-success {
+            background: var(--color-success);
+            color: var(--text-inverse);
+        }
+        
+        [data-theme="dark"] .btn-success:hover {
+            background: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-danger { 
+            background: var(--color-error);
+            color: var(--text-inverse);
+            border-color: var(--color-error);
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+        
+        [data-theme="dark"] .btn-danger {
+            background: var(--color-error);
+            color: var(--text-inverse);
+        }
+        
+        [data-theme="dark"] .btn-danger:hover {
+            background: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+        
+        .btn-secondary { 
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border-secondary);
+        }
+        
+        [data-theme="dark"] .btn-secondary {
+            background: rgba(71, 85, 105, 0.3);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .btn-secondary:hover {
+            background: rgba(71, 85, 105, 0.5);
+        }
+        
+        .btn-primary {
+            background: var(--color-info);
+            color: var(--text-inverse);
+            border-color: var(--color-info);
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        
+        [data-theme="dark"] .btn-primary {
+            background: var(--color-info);
+        }
+        
+        [data-theme="dark"] .btn-primary:hover {
+            background: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        [data-theme="dark"] .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-warning {
+            background: var(--color-warning);
+            color: var(--text-inverse);
+            border-color: var(--color-warning);
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+            border-color: #d97706;
+        }
+        
+        [data-theme="dark"] .btn-warning {
+            background: var(--color-warning);
+        }
+        
+        [data-theme="dark"] .btn-warning:hover {
+            background: #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+        }
         
         .btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
         }
         
         .btn:disabled {
@@ -155,79 +565,759 @@
         }
         
         .btn-active {
-            background: #28a745;
-            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(22, 163, 74, 0.5));
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 25px rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(34, 197, 94, 0.6); }
         }
         
         .btn-inactive {
-            background: #6c757d;
+            background: rgba(71, 85, 105, 0.2);
+            opacity: 0.6;
         }
         
-        .logs {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            max-height: 400px;
-            overflow-y: auto;
+        .logs::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 4px;
+        }
+        
+        .logs::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+        
+        .logs::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
         }
         
         .log-entry {
-            padding: 8px 12px;
-            margin: 5px 0;
-            border-radius: 5px;
-            border-left: 4px solid #ddd;
+            padding: 0.875rem 1rem;
+            margin: 0.625rem 0;
+            border-radius: 0.75rem;
+            border-left: 3px solid;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
         }
         
-        .log-info { border-left-color: #2196f3; background: #e3f2fd; }
-        .log-success { border-left-color: #4caf50; background: #e8f5e8; }
-        .log-error { border-left-color: #f44336; background: #ffebee; }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .log-entry:hover {
+            transform: translateX(6px);
+        }
+        
+        .log-info { 
+            border-left-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .log-info:hover {
+            background: rgba(59, 130, 246, 0.15);
+        }
+        
+        .log-success { 
+            border-left-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        .log-success:hover {
+            background: rgba(34, 197, 94, 0.15);
+        }
+        
+        .log-error { 
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .log-error:hover {
+            background: rgba(239, 68, 68, 0.15);
+        }
+        
+        .log-warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .log-warning:hover {
+            background: rgba(245, 158, 11, 0.15);
+        }
+        
+        .log-debug {
+            border-left-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+        .log-debug:hover {
+            background: rgba(99, 102, 241, 0.15);
+        }
         
         .timestamp {
-            font-size: 0.9em;
-            color: #666;
-            margin-right: 10px;
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-right: 0.75rem;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-weight: 500;
+        }
+        
+        .log-entry span:not(.timestamp) {
+            color: #cbd5e1;
         }
         
         .charging-indicator {
-            width: 20px;
-            height: 20px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             display: inline-block;
-            margin-left: 10px;
+            margin-left: 0.75rem;
+            box-shadow: 0 0 10px currentColor;
         }
         
-        .charging-active { background: #4caf50; animation: pulse 2s infinite; }
-        .charging-stopped { background: #ccc; }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .charging-active { 
+            background: #22c55e;
+            animation: pulse-indicator 2s infinite;
+        }
+        .charging-stopped { 
+            background: #475569;
+            box-shadow: none;
         }
         
-        @media (max-width: 768px) {
-            .container { padding: 10px; }
-            .header h1 { font-size: 2em; }
-            .controls { justify-content: center; }
+        @keyframes pulse-indicator {
+            0%, 100% { 
+                opacity: 1;
+                box-shadow: 0 0 10px #22c55e;
+            }
+            50% { 
+                opacity: 0.6;
+                box-shadow: 0 0 20px #22c55e;
+            }
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
+        
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-active {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(22, 163, 74, 0.5));
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 25px rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(34, 197, 94, 0.6); }
+        }
+        
+        .btn-inactive {
+            background: rgba(71, 85, 105, 0.2);
+            opacity: 0.6;
+        }
+            
+            .logs {
+                background: var(--card-bg);
+                backdrop-filter: blur(20px);
+                border-radius: 1.5rem;
+                padding: 2rem;
+                border: 1px solid var(--card-border);
+                box-shadow: 0 20px 60px var(--card-shadow);
+                max-height: 450px;
+                overflow-y: auto;
+                position: relative;
+                transition: all 0.3s ease;
+            }
+            
+            .logs::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+                opacity: 0.8;
+                border-radius: 1.5rem 1.5rem 0 0;
+            }
+            
+            .logs h3 {
+                color: var(--text-primary);
+                margin-bottom: 1.5rem;
+                font-weight: 700;
+                font-size: 1.25rem;
+            }
+            
+            .logs::-webkit-scrollbar {
+                width: 8px;
+            }
+            
+            .logs::-webkit-scrollbar-track {
+                background: rgba(15, 23, 42, 0.4);
+                border-radius: 4px;
+            }
+            
+            .logs::-webkit-scrollbar-thumb {
+                background: rgba(148, 163, 184, 0.3);
+                border-radius: 4px;
+            }
+            
+            .logs::-webkit-scrollbar-thumb:hover {
+                background: rgba(148, 163, 184, 0.5);
+            }
+            
+            .log-entry {
+                padding: 0.875rem 1rem;
+                margin: 0.625rem 0;
+                border-radius: 0.75rem;
+                border-left: 3px solid;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                backdrop-filter: blur(10px);
+            }
+            
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+            
+            .log-entry:hover {
+                transform: translateX(6px);
+            }
+            
+            .log-info { 
+                border-left-color: #3b82f6;
+                background: rgba(59, 130, 246, 0.1);
+            }
+            .log-info:hover {
+                background: rgba(59, 130, 246, 0.15);
+            }
+            
+            .log-success { 
+                border-left-color: #22c55e;
+                background: rgba(34, 197, 94, 0.1);
+            }
+            .log-success:hover {
+                background: rgba(34, 197, 94, 0.15);
+            }
+            
+            .log-error { 
+                border-left-color: #ef4444;
+                background: rgba(239, 68, 68, 0.1);
+            }
+            .log-error:hover {
+                background: rgba(239, 68, 68, 0.15);
+            }
+            
+            .log-warning {
+                border-left-color: #f59e0b;
+                background: rgba(245, 158, 11, 0.1);
+            }
+            .log-warning:hover {
+                background: rgba(245, 158, 11, 0.15);
+            }
+            
+            .log-debug {
+                border-left-color: #6366f1;
+                background: rgba(99, 102, 241, 0.1);
+            }
+            .log-debug:hover {
+                background: rgba(99, 102, 241, 0.15);
+            }
+            
+            .timestamp {
+                font-size: 0.875rem;
+                color: #64748b;
+                margin-right: 0.75rem;
+                font-family: 'Monaco', 'Courier New', monospace;
+                font-weight: 500;
+            }
+            
+            .log-entry span:not(.timestamp) {
+                color: #cbd5e1;
+            }
+            
+            .charging-indicator {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                display: inline-block;
+                margin-left: 0.75rem;
+                box-shadow: 0 0 10px currentColor;
+            }
+            
+            .charging-active { 
+                background: #22c55e;
+                animation: pulse-indicator 2s infinite;
+            }
+            .charging-stopped { 
+                background: #475569;
+                box-shadow: none;
+            }
+            
+            @keyframes pulse-indicator {
+                0%, 100% { 
+                    opacity: 1;
+                    box-shadow: 0 0 10px #22c55e;
+                }
+                50% { 
+                    opacity: 0.6;
+                    box-shadow: 0 0 20px #22c55e;
+                }
+            }
+            
+            .quick-stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+                margin-bottom: 2rem;
+                padding: 1.5rem;
+                background: var(--stat-bg);
+                backdrop-filter: blur(20px);
+                border-radius: 1rem;
+                border: 1px solid var(--card-border);
+                transition: all 0.3s ease;
+            }
+            
+            .stat-item {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                padding: 0.75rem;
+                background: var(--stat-item-bg);
+                border-radius: 0.75rem;
+                border: 1px solid var(--card-border);
+                transition: all 0.3s ease;
+            }
+            
+            .stat-item:hover {
+                background: var(--metric-hover-bg);
+                border-color: var(--card-border);
+            }
+            
+            .stat-label {
+                font-size: 0.875rem;
+                color: var(--text-tertiary);
+                font-weight: 500;
+            }
+            
+            .stat-value {
+                font-size: 1.125rem;
+                color: var(--text-primary);
+                font-weight: 700;
+                letter-spacing: -0.01em;
+            }
+            
+            /* Hero Metrics Section */
+            .hero-metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: var(--space-5);
+                margin-bottom: var(--space-6);
+            }
+            
+            .hero-metric {
+                background: var(--card-bg);
+                backdrop-filter: blur(20px);
+                border-radius: var(--radius-xl);
+                padding: var(--space-6);
+                border: 1px solid var(--card-border);
+                box-shadow: var(--shadow-lg);
+                display: flex;
+                align-items: center;
+                gap: var(--space-4);
+                transition: all 0.3s ease;
+            }
+            
+            .hero-metric:hover {
+                transform: translateY(-4px);
+                box-shadow: var(--shadow-xl);
+            }
+            
+            .hero-metric-icon {
+                font-size: var(--text-5xl);
+                line-height: 1;
+                flex-shrink: 0;
+            }
+            
+            .hero-metric-content {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .hero-metric-label {
+                font-size: var(--text-sm);
+                font-weight: var(--font-medium);
+                color: var(--text-secondary);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: var(--space-1);
+            }
+            
+            .hero-metric-value {
+                font-size: var(--text-4xl);
+                font-weight: var(--font-bold);
+                color: var(--text-primary);
+                line-height: 1.2;
+                margin-bottom: var(--space-1);
+            }
+            
+            .hero-metric-subtitle {
+                font-size: var(--text-sm);
+                color: var(--text-tertiary);
+                font-weight: var(--font-normal);
+            }
+            
+            .quick-stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: var(--space-4);
+                background: var(--card-bg);
+                backdrop-filter: blur(10px);
+                padding: var(--space-5);
+                border-radius: var(--radius-lg);
+                margin-bottom: var(--space-6);
+                border: 1px solid var(--card-border);
+                box-shadow: var(--shadow-md);
+            }
+            
+            .stat-item {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                padding: 0.75rem;
+                background: var(--stat-item-bg);
+                border-radius: 0.75rem;
+                border: 1px solid var(--card-border);
+                transition: all 0.3s ease;
+            }
+            
+            /* Power Flow Visualization */
+            .power-flow-container {
+                background: var(--card-bg);
+                backdrop-filter: blur(20px);
+                border-radius: 1.5rem;
+                padding: 2rem;
+                border: 1px solid var(--card-border);
+                box-shadow: 0 20px 60px var(--card-shadow);
+                margin-bottom: 2rem;
+                position: relative;
+                transition: all 0.3s ease;
+            }
+            
+            .power-flow-container h2 {
+                color: var(--text-primary);
+            }
+            
+            .power-flow-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+                opacity: 0.8;
+                border-radius: 1.5rem 1.5rem 0 0;
+            }
+            
+            .power-flow {
+                position: relative;
+                height: 400px;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            
+            .flow-node {
+                position: absolute;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 1.25rem;
+                border-radius: 1rem;
+                backdrop-filter: blur(10px);
+                border: 2px solid;
+                transition: all 0.3s ease;
+                z-index: 10;
+            }
+            
+            .flow-node:hover {
+                transform: scale(1.05);
+                box-shadow: 0 0 30px currentColor;
+            }
+            
+            .node-icon {
+                font-size: 2.5rem;
+                filter: drop-shadow(0 0 10px currentColor);
+            }
+            
+            .node-label {
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: var(--text-secondary);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            
+            .node-value {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: var(--text-primary);
+            }
+            
+            /* Glow effect only in dark mode */
+            [data-theme="dark"] .node-value {
+                text-shadow: 0 0 10px currentColor;
+            }
+            
+            .solar-node {
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(251, 191, 36, 0.15);
+                border-color: #fbbf24;
+                color: #fbbf24;
+            }
+            
+            .home-node {
+                top: 50%;
+                left: 10%;
+                transform: translateY(-50%);
+                background: rgba(34, 197, 94, 0.15);
+                border-color: #22c55e;
+                color: #22c55e;
+            }
+            
+            .car-node {
+                top: 50%;
+                right: 10%;
+                transform: translateY(-50%);
+                background: rgba(168, 85, 247, 0.15);
+                border-color: #a855f7;
+                color: #a855f7;
+            }
+            
+            .grid-node {
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(59, 130, 246, 0.15);
+                border-color: #3b82f6;
+                color: #3b82f6;
+            }
+            
+            .flow-lines {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+            }
+            
+            .flow-path {
+                fill: none;
+                stroke: rgba(148, 163, 184, 0.3);
+                stroke-width: 2;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .flow-path.active {
+                opacity: 1;
+            }
+            
+            .flow-particle {
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .flow-particle.active {
+                opacity: 1;
+            }
+            
+            .solar-home-particle.active { fill: #22c55e; filter: drop-shadow(0 0 4px #22c55e); }
+            .solar-car-particle.active { fill: #a855f7; filter: drop-shadow(0 0 4px #a855f7); }
+            .solar-grid-particle.active { fill: #3b82f6; filter: drop-shadow(0 0 4px #3b82f6); }
+            .grid-home-particle.active { fill: #3b82f6; filter: drop-shadow(0 0 4px #3b82f6); }
+            
+            @media (max-width: 768px) {
+                .container { padding: 1rem; }
+                .header h1 { font-size: 2rem; }
+                .header { padding: 1rem 0; margin-bottom: 2rem; }
+                .controls { justify-content: center; }
+                .grid { grid-template-columns: 1fr; gap: 1rem; }
+                .card { padding: 1.5rem; }
+                .quick-stats { grid-template-columns: repeat(2, 1fr); padding: 1rem; }
+                .power-flow { height: 300px; }
+                .flow-node { padding: 1rem; }
+                .node-icon { font-size: 2rem; }
+                .node-value { font-size: 1rem; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                <span id="themeIcon">☀️</span>
+                <span class="theme-toggle-text" id="themeText">Light</span>
+            </button>
             <h1>🌞⚡ Solar Charger Dashboard</h1>
             <p>Real-time monitoring and control</p>
             <span id="systemStatus" class="status-badge status-starting">Starting</span>
+        </div>
+        
+        <!-- Hero Metrics Section -->
+        <div class="hero-metrics">
+            <div class="hero-metric">
+                <div class="hero-metric-icon">☀️</div>
+                <div class="hero-metric-content">
+                    <div class="hero-metric-label">Solar Production</div>
+                    <div class="hero-metric-value" id="heroSolarValue">0.00 kW</div>
+                    <div class="hero-metric-subtitle" id="heroSolarSubtitle">Generating power</div>
+                </div>
+            </div>
+            <div class="hero-metric">
+                <div class="hero-metric-icon">🔋</div>
+                <div class="hero-metric-content">
+                    <div class="hero-metric-label">Battery Level</div>
+                    <div class="hero-metric-value" id="heroBatteryValue">0%</div>
+                    <div class="hero-metric-subtitle" id="heroBatterySubtitle">Not charging</div>
+                </div>
+            </div>
+            <div class="hero-metric">
+                <div class="hero-metric-icon">⚡</div>
+                <div class="hero-metric-content">
+                    <div class="hero-metric-label">Charging Power</div>
+                    <div class="hero-metric-value" id="heroChargingValue">0.00 kW</div>
+                    <div class="hero-metric-subtitle" id="heroChargingSubtitle">Ready to charge</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats Bar -->
+        <div class="quick-stats">
+            <div class="stat-item">
+                <span class="stat-label">🕐 Current Time</span>
+                <span id="currentTime" class="stat-value">--:--:--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">📡 API Calls Today</span>
+                <span id="apiCalls" class="stat-value">0/50</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">🔄 Last Update</span>
+                <span id="lastUpdate" class="stat-value">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">📊 Data Refresh</span>
+                <span id="nextUpdate" class="stat-value">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">⚙️ Mode</span>
+                <span id="systemModeQuick" class="stat-value">--</span>
+            </div>
+        </div>
+        
+        <!-- Power Flow Visualization -->
+        <div class="power-flow-container">
+            <h2 style="text-align: center; color: var(--text-primary); margin-bottom: 2rem; font-size: 1.5rem; font-weight: 700;">⚡ Power Flow</h2>
+            <div class="power-flow">
+                <!-- Solar Node (Top Center) -->
+                <div class="flow-node solar-node" id="solarNode">
+                    <div class="node-icon">☀️</div>
+                    <div class="node-label">Solar</div>
+                    <div class="node-value" id="flowSolarValue">0 W</div>
+                </div>
+                
+                <!-- Home Node (Left) -->
+                <div class="flow-node home-node" id="homeNode">
+                    <div class="node-icon">🏠</div>
+                    <div class="node-label">Home</div>
+                    <div class="node-value" id="flowHomeValue">0 W</div>
+                </div>
+                
+                <!-- Car Node (Right) -->
+                <div class="flow-node car-node" id="carNode">
+                    <div class="node-icon">🚗</div>
+                    <div class="node-label">Car</div>
+                    <div class="node-value" id="flowCarValue">0 W</div>
+                </div>
+                
+                <!-- Grid Node (Bottom) -->
+                <div class="flow-node grid-node" id="gridNode">
+                    <div class="node-icon">⚡</div>
+                    <div class="node-label">Grid</div>
+                    <div class="node-value" id="flowGridValue">0 W</div>
+                </div>
+                
+                <!-- SVG for flow lines -->
+                <svg class="flow-lines" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Solar to Home -->
+                    <path id="flowSolarHome" class="flow-path" d="M 400 100 L 200 200" stroke-dasharray="5,5"/>
+                    <circle class="flow-particle solar-home-particle" r="4">
+                        <animateMotion dur="2s" repeatCount="indefinite">
+                            <mpath href="#flowSolarHome"/>
+                        </animateMotion>
+                    </circle>
+                    
+                    <!-- Solar to Car -->
+                    <path id="flowSolarCar" class="flow-path" d="M 400 100 L 600 200" stroke-dasharray="5,5"/>
+                    <circle class="flow-particle solar-car-particle" r="4">
+                        <animateMotion dur="2s" repeatCount="indefinite">
+                            <mpath href="#flowSolarCar"/>
+                        </animateMotion>
+                    </circle>
+                    
+                    <!-- Solar to Grid (export) -->
+                    <path id="flowSolarGrid" class="flow-path" d="M 400 100 L 400 300" stroke-dasharray="5,5"/>
+                    <circle class="flow-particle solar-grid-particle" r="4">
+                        <animateMotion dur="2s" repeatCount="indefinite">
+                            <mpath href="#flowSolarGrid"/>
+                        </animateMotion>
+                    </circle>
+                    
+                    <!-- Grid to Home (import) -->
+                    <path id="flowGridHome" class="flow-path" d="M 400 300 L 200 200" stroke-dasharray="5,5"/>
+                    <circle class="flow-particle grid-home-particle" r="4">
+                        <animateMotion dur="2s" repeatCount="indefinite">
+                            <mpath href="#flowGridHome"/>
+                        </animateMotion>
+                    </circle>
+                </svg>
+            </div>
         </div>
         
         <div class="grid">
             <!-- Solar Panel -->
             <div class="card">
                 <h3>☀️ Solar Production</h3>
+                <div id="solarError" style="display: none; padding: 0.75rem 1rem; margin: 0.75rem 0; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; border-radius: 0.5rem; color: #fca5a5;"></div>
                 <div class="metric">
                     <span>Current Production:</span>
                     <span id="solarProduction" class="metric-value solar-value">0.0 kW</span>
+                </div>
+                <div class="metric" id="exportMetric" style="display: none;">
+                    <span>Grid Export:</span>
+                    <span id="gridExport" class="metric-value solar-value">0.0 kW</span>
                 </div>
                 <div class="metric">
                     <span>Start Threshold:</span>
@@ -284,7 +1374,7 @@
                     </div>
                 </div>
                 
-                <div class="controls">
+                <div class="controls" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
                     <button id="startBtn" class="btn btn-success" onclick="controlAction('start_charging')">
                         🔋 Start charging
                     </button>
@@ -298,7 +1388,7 @@
                 
                 <!-- Amperage Controls -->
                 <div class="amperage-controls" style="margin-top: 15px;">
-                    <h4>⚡ Charging Current</h4>
+                    <h4 style="text-align: center;">⚡ Charging Current</h4>
                     <div class="amperage-display" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;">
                         <button id="decreaseAmps" class="btn btn-secondary" onclick="adjustAmps(-1)" style="padding: 8px 12px; font-size: 18px; font-weight: bold;">−</button>
                         <div class="current-amps" style="display: flex; flex-direction: column; align-items: center; min-width: 80px;">
@@ -312,25 +1402,54 @@
                     </div>
                 </div>
             
-            <!-- System Panel -->
+            <!-- Energy Statistics Panel -->
             <div class="card">
-                <h3>⚙️ System Control</h3>
+                <h3>📊 Energy Statistics</h3>
+                <div class="metric">
+                    <span>Session Duration:</span>
+                    <span id="sessionDuration" class="metric-value system-value">--</span>
+                </div>
+                <div class="metric">
+                    <span>Energy Added:</span>
+                    <span id="energyAdded" class="metric-value system-value">0.0 kWh</span>
+                </div>
                 <div class="metric">
                     <span>Mode:</span>
                     <span id="systemMode" class="metric-value system-value">Unknown</span>
-                </div>
-                <div class="metric">
-                    <span>Last Action:</span>
-                    <span id="lastAction" class="metric-value">None</span>
                 </div>
                 <div class="metric">
                     <span>Dry Run:</span>
                     <span id="dryRun" class="metric-value">Yes</span>
                 </div>
                 
-                <div class="controls">
-                    <button class="btn btn-primary" onclick="controlAction('refresh_data')">🔄 Refresh Data</button>
+                <div class="controls" style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="controlAction('refresh_data')">🔄 Refresh</button>
                     <button class="btn btn-secondary" onclick="showConfig()">⚙️ Config</button>
+                </div>
+            </div>
+            
+            <!-- HPWC Status Panel (if enabled) -->
+            <div class="card" id="hpwcCard" style="display: none;">
+                <h3>🔌 Wall Connector</h3>
+                <div class="metric">
+                    <span>Vehicle Connected:</span>
+                    <span id="hpwcConnected" class="metric-value">--</span>
+                </div>
+                <div class="metric">
+                    <span>Actual Current:</span>
+                    <span id="hpwcCurrent" class="metric-value">0.0 A</span>
+                </div>
+                <div class="metric">
+                    <span>Grid Voltage:</span>
+                    <span id="hpwcVoltage" class="metric-value">0 V</span>
+                </div>
+                <div class="metric">
+                    <span>Session Energy:</span>
+                    <span id="hpwcEnergy" class="metric-value">0.0 kWh</span>
+                </div>
+                <div class="metric">
+                    <span>Temperature:</span>
+                    <span id="hpwcTemp" class="metric-value">-- °C</span>
                 </div>
             </div>
         </div>
@@ -348,17 +1467,84 @@
     </div>
 
     <script>
+        // Theme Management
+        let userThemePreference = localStorage.getItem('theme-preference'); // 'light', 'dark', or null (auto)
+        let currentTheme = 'light'; // Current active theme
+        
+        // Initialize theme on page load
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                setTheme(savedTheme, false);
+            }
+        }
+        
+        function setTheme(theme, savePreference = true) {
+            currentTheme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Update toggle button
+            const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+            
+            // Save to localStorage if user manually toggled
+            if (savePreference) {
+                localStorage.setItem('theme', theme);
+                userThemePreference = theme;
+            }
+        }
+        
+        function toggleTheme() {
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme, true);
+        }
+        
+        function autoSwitchTheme(solarProduction) {
+            // Only auto-switch if user hasn't manually set a preference
+            if (userThemePreference) {
+                return; // User has a preference, don't auto-switch
+            }
+            
+            // Auto-switch based on solar production
+            const shouldBeDark = solarProduction === 0;
+            const desiredTheme = shouldBeDark ? 'dark' : 'light';
+            
+            if (currentTheme !== desiredTheme) {
+                setTheme(desiredTheme, false); // Don't save as user preference
+            }
+        }
+        
+        // Initialize theme
+        initTheme();
+        
         // Initialize Socket.IO
         const socket = io();
         
         // Update dashboard with new data
         socket.on('data_update', function(data) {
+            console.log('Received data_update from backend at', new Date().toLocaleTimeString());
             updateDashboard(data);
         });
         
         function updateDashboard(data) {
+            // Update hero metrics
+            updateHeroMetrics(data);
+            
+            // Update quick stats bar
+            updateQuickStats(data);
+            
             // Solar data
             const solarProd = (data.solar.pv_production_w || 0) / 1000;
+            
+            // Auto-switch theme based on solar production
+            autoSwitchTheme(data.solar.pv_production_w || 0);
             const startThreshold = (data.system.start_threshold_w || 1800) / 1000;
             const stopThreshold = (data.system.stop_threshold_w || 1500) / 1000;
             const isCharging = data.tesla.charging_state === 'Charging';
@@ -366,35 +1552,39 @@
             document.getElementById('solarProduction').textContent = solarProd.toFixed(2) + ' kW';
             document.getElementById('startThreshold').textContent = startThreshold.toFixed(1) + ' kW';
             
-            // Smart status and progress to charging
-            updateSolarStatus(solarProd, startThreshold, stopThreshold, isCharging);
+            // Show grid export if available
+            if (data.solar.site_export_w !== null && data.solar.site_export_w !== undefined) {
+                const exportKw = data.solar.site_export_w / 1000;
+                document.getElementById('gridExport').textContent = exportKw.toFixed(2) + ' kW';
+                document.getElementById('exportMetric').style.display = 'flex';
+            } else {
+                document.getElementById('exportMetric').style.display = 'none';
+            }
+            
+            // Smart status and progress to charging - pass solar data for connection status
+            updateSolarStatus(solarProd, startThreshold, stopThreshold, isCharging, data.solar);
             
             // Tesla data - handle sleeping state specially
             const isSleeping = data.tesla.charging_state === 'Sleeping';
             const sleepingIndicator = document.getElementById('teslaSleepingIndicator');
             
             if (isSleeping) {
-                // Show sleeping indicator in header
                 sleepingIndicator.style.display = 'inline';
                 
-                // Show dashes for sleeping values
                 const batteryEl = document.getElementById('batteryLevel');
                 const chargingEl = document.getElementById('chargingState');
                 const pluggedEl = document.getElementById('pluggedIn');
                 
                 batteryEl.textContent = '--';
-                chargingEl.textContent = '';
+                chargingEl.textContent = 'Sleeping';
                 pluggedEl.textContent = '--';
                 
-                // Apply sleeping style
                 batteryEl.className = 'metric-value tesla-sleeping';
                 chargingEl.className = 'metric-value tesla-sleeping';
                 pluggedEl.className = 'metric-value tesla-sleeping';
             } else {
-                // Hide sleeping indicator in header
                 sleepingIndicator.style.display = 'none';
                 
-                // Show actual data when awake
                 const batteryEl = document.getElementById('batteryLevel');
                 const chargingEl = document.getElementById('chargingState');
                 const pluggedEl = document.getElementById('pluggedIn');
@@ -403,7 +1593,6 @@
                 chargingEl.textContent = data.tesla.charging_state || 'Unknown';
                 pluggedEl.textContent = data.tesla.plugged_in ? 'Yes' : 'No';
                 
-                // Apply normal Tesla style
                 batteryEl.className = 'metric-value tesla-value';
                 chargingEl.className = 'metric-value tesla-value';
                 pluggedEl.className = 'metric-value tesla-value';
@@ -436,10 +1625,18 @@
             // Update charging buttons based on current state
             updateChargingButtons(data.tesla.charging_state || 'Unknown');
             
+            // Update energy statistics
+            updateEnergyStats(data);
+            
             // System data
             document.getElementById('systemMode').textContent = data.system.dry_run ? 'Dry Run' : 'Live Control';
-            document.getElementById('lastAction').textContent = data.system.last_action || 'None';
             document.getElementById('dryRun').textContent = data.system.dry_run ? 'Yes' : 'No';
+            
+            // Update HPWC data
+            updateHPWCData(data.hpwc);
+            
+            // Update power flow visualization
+            updatePowerFlow(data);
             
             // System status
             const statusEl = document.getElementById('systemStatus');
@@ -450,40 +1647,273 @@
             updateLogs(data.logs);
         }
         
+        function updatePowerFlow(data) {
+            // Get power values
+            const solarW = data.solar.pv_production_w || 0;
+            const carW = (data.tesla.charger_power || 0) * 1000; // Convert kW to W
+            
+            // Home baseline from config (default 400W)
+            const homeW = 400; // Fixed baseline
+            
+            // Calculate grid export/import: Solar - Home - Car
+            // Positive = exporting to grid, Negative = importing from grid
+            const netW = solarW - homeW - carW;
+            const gridExportW = netW > 0 ? netW : 0; // Exporting to grid
+            const gridImportW = netW < 0 ? Math.abs(netW) : 0; // Importing from grid
+            
+            // Update node values
+            document.getElementById('flowSolarValue').textContent = formatPower(solarW);
+            document.getElementById('flowHomeValue').textContent = formatPower(homeW);
+            document.getElementById('flowCarValue').textContent = formatPower(carW);
+            
+            document.getElementById('flowGridValue').textContent = 
+                gridExportW > 0 ? '↑ ' + formatPower(gridExportW) : 
+                gridImportW > 0 ? '↓ ' + formatPower(gridImportW) : formatPower(0);
+            
+            // Update flow animations
+            // Solar always flows to home (baseline)
+            updateFlowAnimation('solar-home-particle', 'flowSolarHome', solarW > 0);
+            // Solar flows to car when charging
+            updateFlowAnimation('solar-car-particle', 'flowSolarCar', carW > 0);
+            // Solar flows to grid when exporting (surplus)
+            updateFlowAnimation('solar-grid-particle', 'flowSolarGrid', gridExportW > 0);
+            // Grid flows to home when importing (deficit)
+            updateFlowAnimation('grid-home-particle', 'flowGridHome', gridImportW > 0);
+        }
+        
+        function updateFlowAnimation(particleClass, pathId, isActive) {
+            const particle = document.querySelector('.' + particleClass);
+            const path = document.getElementById(pathId);
+            
+            if (isActive) {
+                particle.classList.add('active');
+                path.classList.add('active');
+            } else {
+                particle.classList.remove('active');
+                path.classList.remove('active');
+            }
+        }
+        
+        function formatPower(watts) {
+            if (watts >= 1000) {
+                return (watts / 1000).toFixed(2) + ' kW';
+            }
+            return Math.round(watts) + ' W';
+        }
+        
+        function updateHPWCData(hpwc) {
+            const hpwcCard = document.getElementById('hpwcCard');
+            
+            // Hide card if HPWC not enabled
+            if (!hpwc || !hpwc.enabled) {
+                hpwcCard.style.display = 'none';
+                return;
+            }
+            
+            // Show HPWC card when enabled
+            hpwcCard.style.display = 'block';
+            
+            // Check if data is available
+            if (!hpwc.available) {
+                // Show error state
+                document.getElementById('hpwcConnected').textContent = 'Error';
+                document.getElementById('hpwcConnected').className = 'metric-value status-error';
+                document.getElementById('hpwcCurrent').textContent = 'N/A';
+                document.getElementById('hpwcVoltage').textContent = 'N/A';
+                document.getElementById('hpwcEnergy').textContent = 'N/A';
+                document.getElementById('hpwcTemp').textContent = 
+                    hpwc.error ? `Error: ${hpwc.error}` : 'Connection Error';
+                return;
+            }
+            
+            // Update values with actual data
+            const connectedEl = document.getElementById('hpwcConnected');
+            connectedEl.textContent = hpwc.vehicle_connected ? 'Yes' : 'No';
+            connectedEl.className = hpwc.vehicle_connected ? 'metric-value status-ready' : 'metric-value status-low';
+            
+            document.getElementById('hpwcCurrent').textContent = 
+                (hpwc.vehicle_current_a || 0).toFixed(1) + ' A';
+            
+            document.getElementById('hpwcVoltage').textContent = 
+                Math.round(hpwc.grid_v || 0) + ' V';
+            
+            document.getElementById('hpwcEnergy').textContent = 
+                (hpwc.session_energy_kwh || 0).toFixed(2) + ' kWh';
+            
+            // Temperature (show handle temp if available)
+            const temp = hpwc.handle_temp_c || hpwc.pcba_temp_c;
+            document.getElementById('hpwcTemp').textContent = 
+                temp ? temp.toFixed(1) + ' °C' : '-- °C';
+        }
+        
+        function updateHeroMetrics(data) {
+            // Solar Production
+            const solarW = data.solar.pv_production_w || 0;
+            const solarKw = solarW / 1000;
+            document.getElementById('heroSolarValue').textContent = solarKw.toFixed(2) + ' kW';
+            
+            if (solarW > 0) {
+                document.getElementById('heroSolarSubtitle').textContent = 'Generating power';
+            } else {
+                document.getElementById('heroSolarSubtitle').textContent = 'No production';
+            }
+            
+            // Battery Level
+            const soc = data.tesla.soc || 0;
+            document.getElementById('heroBatteryValue').textContent = soc + '%';
+            
+            const chargingState = data.tesla.charging_state || 'Unknown';
+            if (chargingState === 'Charging') {
+                const chargerPower = data.tesla.charger_power || 0;
+                document.getElementById('heroBatterySubtitle').textContent = `Charging at ${chargerPower.toFixed(1)} kW`;
+            } else if (chargingState === 'Complete') {
+                document.getElementById('heroBatterySubtitle').textContent = 'Fully charged';
+            } else if (chargingState === 'Stopped') {
+                document.getElementById('heroBatterySubtitle').textContent = 'Not charging';
+            } else {
+                document.getElementById('heroBatterySubtitle').textContent = chargingState;
+            }
+            
+            // Charging Power
+            const chargingPower = data.tesla.charger_power || 0;
+            document.getElementById('heroChargingValue').textContent = chargingPower.toFixed(2) + ' kW';
+            
+            if (chargingState === 'Charging') {
+                const chargerAmps = data.tesla.charger_actual_current || 0;
+                const chargerVolts = data.tesla.charger_voltage || 240;
+                document.getElementById('heroChargingSubtitle').textContent = `${chargerAmps}A @ ${chargerVolts}V`;
+            } else if (data.tesla.plugged_in) {
+                document.getElementById('heroChargingSubtitle').textContent = 'Plugged in, ready';
+            } else {
+                document.getElementById('heroChargingSubtitle').textContent = 'Not connected';
+            }
+        }
+        
+        let lastUpdateTime = Date.now(); // Initialize to now
+        let updateIntervalSeconds = 10; // Default, will be updated from backend
+        
+        // Live clock - updates every second
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // Show refresh interval instead of countdown
+            // Data is pushed every interval, but may be cached
+            document.getElementById('nextUpdate').textContent = `every ${updateIntervalSeconds}s`;
+        }, 1000);
+        
+        function updateQuickStats(data) {
+            // Update last update timestamp - this resets the countdown
+            lastUpdateTime = Date.now();
+            console.log('updateQuickStats called, reset lastUpdateTime to', new Date(lastUpdateTime).toLocaleTimeString());
+            
+            // Update interval from backend (if provided)
+            if (data.system && data.system.poll_interval) {
+                updateIntervalSeconds = data.system.poll_interval;
+                console.log('Update interval set to', updateIntervalSeconds, 'seconds');
+            }
+            
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // API calls (would need to be passed from backend)
+            // For now, show placeholder
+            document.getElementById('apiCalls').textContent = '--/50';
+            
+            // Mode
+            const mode = data.system.dry_run ? '🧪 Dry Run' : '⚡ Live';
+            document.getElementById('systemModeQuick').textContent = mode;
+        }
+        
+        function updateThresholdInfo(solarProd, startThreshold, isCharging) {
+            const thresholdEl = document.getElementById('thresholdInfo');
+            const diff = solarProd - startThreshold;
+            
+            if (isCharging) {
+                thresholdEl.textContent = '✓ Charging';
+                thresholdEl.className = 'metric-value status-charging';
+            } else if (diff >= 0) {
+                thresholdEl.textContent = `+${diff.toFixed(2)} kW`;
+                thresholdEl.className = 'metric-value status-ready';
+            } else if (diff > -0.3) {
+                thresholdEl.textContent = `${diff.toFixed(2)} kW`;
+                thresholdEl.className = 'metric-value status-close';
+            } else {
+                thresholdEl.textContent = `${diff.toFixed(2)} kW`;
+                thresholdEl.className = 'metric-value status-low';
+            }
+        }
+        
+        function formatDuration(seconds) {
+            if (!seconds || seconds === 0) return '--';
+            
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else if (minutes > 0) {
+                return `${minutes}m`;
+            } else {
+                return `${seconds}s`;
+            }
+        }
+        
+        function updateEnergyStats(data) {
+            const isCharging = data.tesla.charging_state === 'Charging';
+            const chargingPower = data.tesla.charger_power || 0;
+            const solarPower = (data.solar.pv_production_w || 0) / 1000;
+            
+            // Use HPWC session data if available and vehicle is connected
+            const hpwc = data.hpwc;
+            const useHPWC = hpwc && hpwc.enabled && hpwc.available && hpwc.vehicle_connected;
+            
+            if (useHPWC && hpwc.session_s > 0) {
+                // Session duration from HPWC (persists across restarts)
+                document.getElementById('sessionDuration').textContent = formatDuration(hpwc.session_s);
+                
+                // Energy added from HPWC (Wh to kWh)
+                const energyKwh = (hpwc.session_energy_wh || 0) / 1000;
+                document.getElementById('energyAdded').textContent = energyKwh.toFixed(2) + ' kWh';
+            } else if (isCharging) {
+                // Fallback: Show current charging info when HPWC unavailable
+                document.getElementById('sessionDuration').textContent = 'Active';
+                document.getElementById('energyAdded').textContent = '-- kWh';
+            } else {
+                // Not charging - show zeros/dashes
+                document.getElementById('sessionDuration').textContent = '--';
+                document.getElementById('energyAdded').textContent = '0.00 kWh';
+            }
+        }
+        
         function updateSolarStatus(solarProd, startThreshold, stopThreshold, isCharging, solarData = {}) {
             const statusEl = document.getElementById('solarStatus');
             const toChargingEl = document.getElementById('toCharging');
-            const connectionStatusEl = document.getElementById('solarConnectionStatus');
             const errorEl = document.getElementById('solarError');
             
             // Handle connection status
             if (solarData.connection_status === 'error') {
-                connectionStatusEl.textContent = 'Connection Error';
-                connectionStatusEl.className = 'status-badge status-error';
-                connectionStatusEl.style.display = 'inline-block';
                 errorEl.textContent = solarData.error_message || 'Unable to connect to SolarEdge';
                 errorEl.style.display = 'block';
-                
-                // Show error state
                 statusEl.textContent = 'Connection Error';
                 statusEl.className = 'metric-value status-error';
                 toChargingEl.textContent = 'Check connection';
                 toChargingEl.className = 'metric-value status-error';
                 return;
-            } else if (solarData.connection_status === 'connected') {
-                connectionStatusEl.textContent = 'Connected';
-                connectionStatusEl.className = 'status-badge status-running';
-                connectionStatusEl.style.display = 'inline-block';
-                errorEl.style.display = 'none';
             } else {
-                // Unknown status
-                connectionStatusEl.style.display = 'none';
                 errorEl.style.display = 'none';
             }
             
             if (isCharging) {
-                // Currently charging
-                statusEl.textContent = 'Charging Active';
+                statusEl.textContent = '⚡ Charging Active';
                 statusEl.className = 'metric-value status-charging';
                 
                 const toStop = solarProd - stopThreshold;
@@ -494,26 +1924,22 @@
                     toChargingEl.textContent = `Need +${Math.abs(toStop).toFixed(2)} kW to avoid stop`;
                     toChargingEl.className = 'metric-value status-close';
                 }
-                
             } else {
-                // Not charging
                 const toStart = solarProd - startThreshold;
                 
                 if (toStart >= 0) {
-                    statusEl.textContent = 'Ready to Charge!';
+                    statusEl.textContent = '✓ Ready to Charge!';
                     statusEl.className = 'metric-value status-ready';
                     toChargingEl.textContent = `${toStart.toFixed(2)} kW above threshold`;
                     toChargingEl.className = 'metric-value status-ready';
-                    
                 } else if (toStart > -0.3) {
-                    statusEl.textContent = 'Close to Charging';
+                    statusEl.textContent = '~ Close to Charging';
                     statusEl.className = 'metric-value status-close';
                     toChargingEl.textContent = `Need +${Math.abs(toStart).toFixed(2)} kW`;
                     toChargingEl.className = 'metric-value status-close';
-                    
                 } else {
-                    statusEl.textContent = solarProd > 0 ? 'Producing' : 'No Solar';
-                    statusEl.className = 'metric-value status-low';
+                    statusEl.textContent = solarProd > 0 ? '☀️ Producing' : '🌙 Night';
+                    statusEl.className = solarProd > 0 ? 'metric-value status-low' : 'metric-value tesla-sleeping';
                     toChargingEl.textContent = `Need +${Math.abs(toStart).toFixed(2)} kW`;
                     toChargingEl.className = 'metric-value status-low';
                 }
@@ -533,12 +1959,11 @@
                 const power = teslaData.charger_power || 0;
                 document.getElementById('chargingPower').textContent = power.toFixed(1) + ' kW';
                 
-                // Update current (actual / requested)
-                const actualCurrent = teslaData.charger_actual_current || 0;
+                // Update current (requested / max)
                 const requestedCurrent = teslaData.charge_current_request || 0;
                 const maxCurrent = teslaData.charge_current_request_max || 0;
                 document.getElementById('chargingCurrent').textContent = 
-                    `${actualCurrent}A / ${requestedCurrent}A (max: ${maxCurrent}A)`;
+                    `${requestedCurrent}/${maxCurrent}A`;
                 
                 // Update voltage
                 const voltage = teslaData.charger_voltage || 0;

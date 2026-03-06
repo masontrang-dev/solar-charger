@@ -23,29 +23,22 @@ def load_config(path: str) -> dict:
 
 def should_wake_tesla(config: dict, logger: logging.Logger, force_wake: bool = False) -> bool:
     """Determine if we should wake Tesla based on solar conditions"""
-    
     if force_wake:
         logger.info("🔧 Force wake enabled - will wake Tesla regardless of solar conditions")
         return True
     
     try:
-        # Get current solar production to decide if we should wake the vehicle
         from clients.solaredge_cloud import SolarEdgeCloudClient
         
         solar_client = SolarEdgeCloudClient(config)
         solar_data = solar_client.get_power()
         
-        current_production_w = solar_data.get('pv_production_w', 0)
-        current_production_kw = current_production_w / 1000
-        
-        # Get charging thresholds from config
+        current_production_kw = solar_data.get('pv_production_w', 0) / 1000
         start_threshold_kw = config.get('control', {}).get('start_export_watts', 1800) / 1000
         
         logger.info(f"Current solar production: {current_production_kw:.2f}kW")
         logger.info(f"Start charging threshold: {start_threshold_kw}kW")
         
-        # Only wake if we have enough solar to potentially start charging
-        # Add a small buffer (0.1kW) to account for fluctuations
         wake_threshold = start_threshold_kw - 0.05
         
         if current_production_kw >= wake_threshold:
@@ -63,7 +56,6 @@ def should_wake_tesla(config: dict, logger: logging.Logger, force_wake: bool = F
 
 def wake_tesla_if_needed(config: dict, logger: logging.Logger, force_wake: bool = False) -> bool:
     """Wake up Tesla vehicle if it's sleeping and conditions warrant it"""
-    
     try:
         tesla_config = config.get('tesla', {}).get('api', {})
         access_token = tesla_config.get('access_token')
@@ -78,7 +70,6 @@ def wake_tesla_if_needed(config: dict, logger: logging.Logger, force_wake: bool 
             "Content-Type": "application/json"
         }
         
-        # Get vehicle list to check state
         logger.info("Checking Tesla vehicle state...")
         vehicles_url = "https://localhost:8080/api/1/vehicles"
         
@@ -86,12 +77,11 @@ def wake_tesla_if_needed(config: dict, logger: logging.Logger, force_wake: bool 
         
         if response.status_code != 200:
             logger.warning(f"Failed to get vehicle list: {response.status_code}")
-            return True  # Continue anyway
+            return True
         
         data = response.json()
         vehicles = data.get('response', [])
         
-        # Find our vehicle
         vehicle_id = None
         current_state = None
         
@@ -104,31 +94,24 @@ def wake_tesla_if_needed(config: dict, logger: logging.Logger, force_wake: bool 
         
         if not vehicle_id:
             logger.warning(f"Vehicle with VIN {vin} not found")
-            return True  # Continue anyway
+            return True
         
-        # Wake up if sleeping AND solar conditions warrant it
         if current_state in ['asleep', 'offline']:
-            # Check if we should wake based on solar production
             if not should_wake_tesla(config, logger, force_wake):
                 logger.info(f"Vehicle is {current_state} but solar is too low - leaving asleep")
                 return True
             
             logger.info(f"Vehicle is {current_state} - sending wake up command...")
-            
             wake_url = f"https://localhost:8080/api/1/vehicles/{vehicle_id}/wake_up"
-            
             response = requests.post(wake_url, headers=headers, verify=False, timeout=30)
             
             if response.status_code == 200:
                 logger.info("Wake up command sent successfully")
-                
-                # Wait for vehicle to wake up (max 2 minutes)
                 logger.info("Waiting for vehicle to wake up...")
                 
-                for attempt in range(12):  # 12 attempts * 10 seconds = 2 minutes
+                for attempt in range(12):
                     time.sleep(10)
                     
-                    # Check state again
                     response = requests.get(vehicles_url, headers=headers, verify=False, timeout=10)
                     if response.status_code == 200:
                         data = response.json()
@@ -146,10 +129,8 @@ def wake_tesla_if_needed(config: dict, logger: logging.Logger, force_wake: bool 
                 
                 logger.warning("Vehicle is taking longer than expected to wake up")
                 logger.info("Continuing with solar charger - vehicle may wake up during operation")
-                
             else:
                 logger.warning(f"Wake up command failed: {response.status_code}")
-                
         else:
             logger.info(f"✅ Tesla vehicle is already {current_state}")
         
@@ -188,7 +169,6 @@ def main():
         logger.error("Failed to ensure valid Tesla tokens")
         sys.exit(1)
 
-    # Test SolarEdge connection
     logger.info("☀️ Testing SolarEdge connection...")
     from clients.solaredge_cloud import SolarEdgeCloudClient
     solar_client = SolarEdgeCloudClient(config)
@@ -198,13 +178,7 @@ def main():
         logger.warning("⚠️  SolarEdge connection failed. The system will run in degraded mode with limited functionality.")
         logger.warning("    Solar production data will not be available, and charging decisions will be affected.")
     
-    # Wake up Tesla if needed before starting
-    if not solar_connected and not args.force_wake:
-        logger.info("🚗 SolarEdge unavailable - will attempt to wake Tesla to check status...")
-        force_wake = True
-    else:
-        force_wake = args.force_wake
-        
+    force_wake = True if (not solar_connected and not args.force_wake) else args.force_wake
     logger.info("🚗 Checking Tesla vehicle status...")
     wake_tesla_if_needed(config, logger, force_wake)
 

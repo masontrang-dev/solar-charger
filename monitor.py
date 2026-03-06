@@ -12,12 +12,9 @@ from clients.tesla import TeslaClient
 
 def monitor_system():
     """Monitor solar and Tesla with clean output"""
-    
-    # Load config
     with open('config.yaml', 'r') as f:
         config = yaml.safe_load(f)
     
-    # Initialize clients
     solar_client = SolarEdgeCloudClient(config)
     tesla_client = TeslaClient(config)
     
@@ -28,32 +25,28 @@ def monitor_system():
     
     try:
         while True:
-            # Get current time
             now = datetime.now().strftime("%H:%M:%S")
             
-            # Get solar data
             try:
                 solar_data = solar_client.get_power()
-                solar_kw = solar_data.get("pv_production_w", 0) / 1000.0  # Convert to kW
+                solar_kw = solar_data.get("pv_production_w", 0) / 1000.0
                 export_kw = solar_data.get("site_export_w", 0)
                 if export_kw:
                     export_kw = export_kw / 1000.0
-            except Exception as e:
+            except Exception:
                 solar_kw = 0.0
                 export_kw = None
             
-            # Get Tesla data
             try:
                 tesla_data = tesla_client.get_state()
                 tesla_soc = tesla_data.get("soc", 0)
                 plugged_in = tesla_data.get("plugged_in", False)
                 charging_state = tesla_data.get("charging_state", "Unknown")
-            except Exception as e:
+            except Exception:
                 tesla_soc = 0
                 plugged_in = False
                 charging_state = "Error"
             
-            # Determine status
             if not plugged_in:
                 status = "Unplugged"
                 action = "Waiting"
@@ -71,13 +64,9 @@ def monitor_system():
                 status = charging_state
                 action = "Monitoring"
             
-            # Format export info
             export_str = f"(+{export_kw:.3f}kW)" if export_kw else ""
-            
-            # Print status line
             print(f"{now}        {solar_kw:>7.3f}kW {export_str:<12} {tesla_soc:>3d}%     {status:<10} {action}")
             
-            # Wait 30 seconds (to stay under SolarEdge API limits)
             time.sleep(30)
             
     except KeyboardInterrupt:
